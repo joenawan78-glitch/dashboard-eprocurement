@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Eprocurement Unpad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Library penunjang waktu untuk Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.27.0/dist/date-fns.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; overflow-x: hidden; padding-top: 110px; }
+        
+        /* Layout Header Brand (Layer 1) */
+        .brand-header { height: 50px; background: #f0f2f5; position: fixed; top: 0; left: 0; right: 0; z-index: 1100; display: flex; align-items: center; padding: 0 2rem; border-bottom: 1px solid #e2e8f0; }
+        .brand { font-size: 1.1rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; text-transform: uppercase; }
+        .brand img { height: 42px; width: auto; margin-right: 12px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        /* Layout Menu Bar (Layer 2) */
+        .menu-bar { height: 60px; background: #1e293b; position: fixed; top: 50px; left: 0; right: 0; z-index: 1000; display: flex; align-items: center; padding: 0 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .nav-container { display: flex; flex: 1; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
+        .nav-container::-webkit-scrollbar { display: none; }
+        
+        .nav-link { display: flex; align-items: center; padding: 0 15px; height: 60px; color: #94a3b8; transition: all 0.2s; border-bottom: 4px solid transparent; cursor: pointer; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; white-space: nowrap; }
+        .nav-link:hover { color: white; background: rgba(255,255,255,0.05); }
+        .nav-link.active { color: white; border-bottom-color: #facc15; background: rgba(255,255,255,0.05); }
+        .nav-link i { margin-right: 8px; }
+
+        .main-content { padding: 20px; min-height: calc(100vh - 110px); transition: all 0.3s; }
+        .glass-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        
+        .page-section { display: none; }
+        .page-section.active { display: block; animation: fadeIn 0.4s ease-out; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .badge-card { border-left-width: 4px; padding: 1rem; display: flex; flex-direction: column; justify-content: center; min-height: 95px; }
+        th { background-color: #f8fafc; font-size: 0.65rem; text-transform: uppercase; color: #64748b; padding: 12px 8px; border-bottom: 2px solid #edf2f7; font-weight: 700; }
+        td { padding: 10px 8px; border-bottom: 1px solid #f1f5f9; font-size: 0.7rem; vertical-align: middle; }
+        
+        .chart-container { height: 260px; position: relative; }
+        .chart-container-tall { height: 400px; position: relative; }
+        .chart-container-large { height: 480px; position: relative; }
+        
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal.active { display: flex; }
+
+        .sub-nav-btn { padding: 8px 16px; border-radius: 8px; font-size: 0.7rem; font-weight: 700; color: #64748b; transition: all 0.2s; border: 1px solid #e2e8f0; background: white; }
+        .sub-nav-btn.active { background-color: #1e293b; color: white; border-color: #1e293b; }
+
+        .star-rating { color: #fbbf24; }
+    </style>
+</head>
+<body>
+
+    <!-- BRAND BAR -->
+    <header class="brand-header">
+        <div class="brand">
+            <img src="https://upload.wikimedia.org/wikipedia/id/6/62/Logo_Unpad.JPG?20160510033059" alt="Logo Unpad">
+            Dashboard Eprocurement Unpad
+        </div>
+    </header>
+
+    <!-- MENU BAR -->
+    <nav class="menu-bar">
+        <div class="nav-container">
+            <div class="nav-link active" data-page="home" onclick="showPage('home', this)"><i class="fas fa-home"></i> Home</div>
+            <div class="nav-link" data-page="rup" onclick="showPage('rup', this)"><i class="fas fa-clipboard-list"></i> Rencana Umum Pengadaan</div>
+            <div class="nav-link" data-page="pr" onclick="showPage('pr', this)"><i class="fas fa-shopping-cart"></i> Requisitions</div>
+            <div class="nav-link" data-page="po" onclick="showPage('po', this)"><i class="fas fa-file-contract"></i> Purchase Order</div>
+            <div class="nav-link" data-page="rec" onclick="showPage('rec', this)"><i class="fas fa-box"></i> Receiving</div>
+            <div class="nav-link" data-page="pay" onclick="showPage('pay', this)"><i class="fas fa-credit-card"></i> Payment</div>
+            <div class="nav-link" data-page="monitoring" onclick="showPage('monitoring', this)"><i class="fas fa-tv"></i> Monitoring</div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <!-- GLOBAL FILTERS -->
+        <header class="glass-card p-4 mb-6 flex flex-col gap-4">
+            <div class="flex flex-wrap gap-3 items-end w-full">
+                <div class="flex-1 min-w-[100px]">
+                    <label class="block text-[9px] font-bold text-gray-500 mb-1 uppercase">Tahun</label>
+                    <select id="filterTahun" onchange="updateDashboard()" class="w-full border rounded p-1.5 text-xs bg-gray-50 focus:outline-blue-500">
+                        <option value="Semua">Semua Tahun</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-[9px] font-bold text-gray-500 mb-1 uppercase">Unit Kerja</label>
+                    <select id="filterUnit" onchange="updateDashboard()" class="w-full border rounded p-1.5 text-xs bg-gray-50 focus:outline-blue-500">
+                        <option value="Semua">Semua Unit Kerja</option>
+                        <option id="unitListOptions"></option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label class="block text-[9px] font-bold text-gray-500 mb-1 uppercase">Metode Pengadaan</label>
+                    <select id="filterMetode" onchange="updateDashboard()" class="w-full border rounded p-1.5 text-xs bg-gray-50 focus:outline-blue-500">
+                        <option value="Semua">Semua Metode</option>
+                        <option value="e-Purchasing">e-Purchasing</option>
+                        <option value="Tender">Tender</option>
+                        <option value="Pengadaan Langsung">Pengadaan Langsung</option>
+                        <option value="Penunjukan Langsung">Penunjukan Langsung</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label class="block text-[9px] font-bold text-gray-500 mb-1 uppercase">Jenis Pengadaan</label>
+                    <select id="filterJenis" onchange="updateDashboard()" class="w-full border rounded p-1.5 text-xs bg-gray-50 focus:outline-blue-500">
+                        <option value="Semua">Semua Jenis</option>
+                        <option value="Barang">Barang</option>
+                        <option value="Pekerjaan Konstruksi">Pekerjaan Konstruksi</option>
+                        <option value="Jasa Konsultansi">Jasa Konsultansi</option>
+                        <option value="Jasa Lainnya">Jasa Lainnya</option>
+                    </select>
+                </div>
+                <div class="flex-none">
+                    <button onclick="resetFilters()" class="bg-gray-100 text-gray-600 px-4 py-1.5 rounded text-xs font-bold hover:bg-gray-200 border">RESET</button>
+                </div>
+            </div>
+            <div class="w-full">
+                <label class="block text-[9px] font-bold text-gray-500 mb-1 uppercase">Nama Paket Pekerjaan</label>
+                <div class="relative">
+                    <input type="text" id="filterSearch" oninput="updateDashboard()" placeholder="Ketik nama paket untuk menyaring data..." class="w-full border rounded p-2 text-xs bg-gray-50 pl-9 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- PAGE: HOME -->
+        <div id="page-home" class="page-section active">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6" id="homeBadges">
+                <div class="glass-card badge-card border-blue-500">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase">Pagu RUP</p>
+                    <h4 id="badgeRupQty" class="text-lg font-bold">0 Pkt</h4>
+                    <p id="badgeRupVal" class="text-[11px] text-blue-600 font-bold card-value">Rp 0</p>
+                </div>
+                <div class="glass-card badge-card border-indigo-500">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase">Requisitions</p>
+                    <h4 id="badgePrQty" class="text-lg font-bold">0 Pkt</h4>
+                    <p id="badgePrVal" class="text-[11px] text-indigo-600 font-bold card-value">Rp 0</p>
+                </div>
+                <div class="glass-card badge-card border-emerald-500">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase">PO</p>
+                    <h4 id="badgePoQty" class="text-lg font-bold">0 Pkt</h4>
+                    <p id="badgePoVal" class="text-[11px] text-emerald-600 font-bold card-value">Rp 0</p>
+                </div>
+                <div class="glass-card badge-card border-amber-500">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase">REC</p>
+                    <h4 id="badgeRecQty" class="text-lg font-bold">0 Pkt</h4>
+                    <p id="badgeRecVal" class="text-[11px] text-amber-600 font-bold card-value">Rp 0</p>
+                </div>
+                <div class="glass-card badge-card border-purple-500">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase">PAY</p>
+                    <h4 id="badgePayQty" class="text-lg font-bold">0 Pkt</h4>
+                    <p id="badgePayVal" class="text-[11px] text-purple-600 font-bold card-value">Rp 0</p>
+                </div>
+                <div class="glass-card badge-card border-green-600 bg-green-50">
+                    <p class="text-[9px] font-bold text-green-700 uppercase">Saving</p>
+                    <h4 id="badgeSavingsVal" class="text-lg font-bold text-green-800 card-value">Rp 0</h4>
+                    <p id="badgeSavingsPct" class="text-[10px] text-green-600 font-bold">0% Saving</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="glass-card p-4"><h3 class="text-xs font-bold text-gray-600 mb-4 uppercase">1. Jenis Pengadaan</h3><div class="chart-container"><canvas id="chartJenis"></canvas></div></div>
+                <div class="glass-card p-4"><h3 class="text-xs font-bold text-gray-600 mb-4 uppercase">2. Metode Pengadaan</h3><div class="chart-container"><canvas id="chartMetode"></canvas></div></div>
+                <div class="glass-card p-4"><h3 class="text-xs font-bold text-gray-600 mb-4 uppercase">3. Usulan Paket per Unit Kerja (Pie)</h3><div class="chart-container"><canvas id="chartUnitUsulan"></canvas></div></div>
+                <div class="glass-card p-4"><h3 class="text-xs font-bold text-gray-600 mb-4 uppercase">4. Progres Requisitions tiap Unit</h3><div class="chart-container"><canvas id="chartUnitProgres"></canvas></div></div>
+            </div>
+
+            <div class="glass-card p-5">
+                <h3 class="text-xs font-bold text-gray-600 mb-4 uppercase text-center">Rekapitulasi Paket Pekerjaan berdasarkan Unit Kerja</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" class="min-w-[180px] border-r">Unit Kerja</th>
+                                <th colspan="2" class="text-center border-b border-r bg-indigo-50">Requisition</th>
+                                <th colspan="2" class="text-center border-b border-r bg-emerald-50">Purchase Order</th>
+                                <th colspan="2" class="text-center border-b border-r bg-amber-50">Receive</th>
+                                <th colspan="2" class="text-center border-b border-r bg-purple-50">Payment</th>
+                                <th rowspan="2" class="text-center bg-green-50">Efisiensi</th>
+                            </tr>
+                            <tr>
+                                <th class="text-center border-r bg-indigo-50">Jml</th>
+                                <th class="text-center border-r bg-indigo-50">Nilai</th>
+                                <th class="text-center border-r bg-emerald-50">Jml</th>
+                                <th class="text-center border-r bg-emerald-50">Nilai</th>
+                                <th class="text-center border-r bg-amber-50">Jml</th>
+                                <th class="text-center border-r bg-amber-50">Nilai</th>
+                                <th class="text-center border-r bg-purple-50">Jml</th>
+                                <th class="text-center border-r bg-purple-50">Nilai</th>
+                            </tr>
+                        </thead>
+                        <tbody id="unitTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: RENCANA UMUM PENGADAAN -->
+        <div id="page-rup" class="page-section">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="glass-card p-4 border-l-4 border-blue-600"><p class="text-[10px] font-bold text-gray-500 uppercase">Jumlah Usulan RUP</p><h2 id="pageRupQty" class="text-xl font-bold text-blue-700">0 Paket</h2></div>
+                <div class="glass-card p-4 border-l-4 border-blue-600"><p class="text-[10px] font-bold text-gray-500 uppercase">Total Nilai Pagu RUP</p><h2 id="pageRupVal" class="text-xl font-bold text-blue-700">Rp 0</h2></div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="glass-card p-5">
+                    <h3 class="text-xs font-bold text-gray-600 mb-4 uppercase">Rekapitulasi RUP per Unit Kerja</h3>
+                    <div class="chart-container-tall"><canvas id="chartRupUnit"></canvas></div>
+                </div>
+                <div class="glass-card p-5">
+                    <h3 class="text-xs font-bold text-gray-600 mb-4 uppercase text-center">Progres Usulan: Sudah diajukan vs Belum</h3>
+                    <div class="chart-container flex items-center justify-center" style="height: 350px;">
+                        <canvas id="chartRupProgres"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card overflow-hidden">
+                <div class="p-4 bg-slate-50 border-b flex justify-between items-center">
+                    <h4 class="text-xs font-bold text-slate-600 uppercase">Tabel Rekapitulasi Rencana Umum Pengadaan</h4>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr>
+                                <th class="text-center">Tahun</th>
+                                <th>Nama Unit Kerja</th>
+                                <th class="text-center">Jumlah Paket</th>
+                                <th class="text-right">Total Nilai Paket</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rupSummaryTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- OTHER SUB-PAGES -->
+        <div id="page-pr" class="page-section">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><div class="glass-card p-4 border-l-4 border-indigo-600"><p class="text-[10px] font-bold text-gray-500 uppercase">Jumlah Requisition</p><h2 id="pagePrQty" class="text-xl font-bold text-indigo-700">0 Paket</h2></div><div class="glass-card p-4 border-l-4 border-indigo-600"><p class="text-[10px] font-bold text-gray-500 uppercase">Total Nilai Requisition</p><h2 id="pagePrVal" class="text-xl font-bold text-indigo-700">Rp 0</h2></div></div>
+            <div class="glass-card overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-left"><thead><tr><th>Tahun</th><th>Paket Pekerjaan</th><th>Nilai PR</th><th>Unit Kerja</th><th class="text-center">Tgl PR</th><th>Status</th></tr></thead><tbody id="prDetailTable"></tbody></table></div></div>
+        </div>
+
+        <div id="page-po" class="page-section">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><div class="glass-card p-4 border-l-4 border-emerald-600"><p class="text-[10px] font-bold text-gray-500 uppercase">Jumlah PO Terbit</p><h2 id="pagePoQty" class="text-xl font-bold text-emerald-700">0 Paket</h2></div><div class="glass-card p-4 border-l-4 border-emerald-600"><p class="text-[10px] font-bold text-gray-500 uppercase">Total Nilai Kontrak (PO)</p><h2 id="pagePoVal" class="text-xl font-bold text-emerald-700">Rp 0</h2></div></div>
+            <div class="glass-card overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-left"><thead><tr><th>Tahun</th><th>Paket Pekerjaan</th><th>Nilai Kontrak</th><th>Penyedia</th><th class="text-center">Tgl PO</th><th>Status</th></tr></thead><tbody id="poDetailTable"></tbody></table></div></div>
+        </div>
+
+        <div id="page-rec" class="page-section">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><div class="glass-card p-4 border-l-4 border-amber-500"><p class="text-[10px] font-bold text-gray-500 uppercase">Jumlah Paket Diterima</p><h2 id="pageRecQty" class="text-xl font-bold text-amber-700">0 Paket</h2></div><div class="glass-card p-4 border-l-4 border-amber-500"><p class="text-[10px] font-bold text-gray-500 uppercase">Total Nilai Barang Diterima</p><h2 id="pageRecVal" class="text-xl font-bold text-amber-700">Rp 0</h2></div></div>
+            <div class="glass-card overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-left"><thead><tr><th>Tahun</th><th>Paket Pekerjaan</th><th class="bg-amber-50 text-center">Sdh Terima</th><th class="bg-amber-50 text-center">Sisa %</th><th class="text-center">Tgl REC</th><th>Status</th></tr></thead><tbody id="recDetailTable"></tbody></table></div></div>
+        </div>
+
+        <div id="page-pay" class="page-section">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><div class="glass-card p-4 border-l-4 border-purple-500"><p class="text-[10px] font-bold text-gray-500 uppercase">Jumlah Paket Terbayar</p><h2 id="pagePayQty" class="text-xl font-bold text-purple-700">0 Paket</h2></div><div class="glass-card p-4 border-l-4 border-purple-500"><p class="text-[10px] font-bold text-gray-500 uppercase">Total Nilai Pembayaran</p><h2 id="pagePayVal" class="text-xl font-bold text-purple-700">Rp 0</h2></div></div>
+            <div class="glass-card overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-left"><thead><tr><th>Tahun</th><th>Paket Pekerjaan</th><th>Nilai Terbayar</th><th class="text-center">Tgl PAY</th><th>Status</th></tr></thead><tbody id="payDetailTable"></tbody></table></div></div>
+        </div>
+
+        <div id="page-monitoring" class="page-section">
+            <div class="flex gap-2 mb-6 bg-white p-2 rounded-xl border border-slate-200 overflow-x-auto scrollbar-width-none">
+                <button onclick="switchMonitoring('paket', this)" id="mon-btn-paket" class="sub-nav-btn active uppercase whitespace-nowrap">Monitoring Paket</button>
+                <button onclick="switchMonitoring('pk', this)" id="mon-btn-pk" class="sub-nav-btn uppercase whitespace-nowrap">Monitoring PK</button>
+                <button onclick="switchMonitoring('pokja', this)" id="mon-btn-pokja" class="sub-nav-btn uppercase whitespace-nowrap">Monitoring Pokja</button>
+                <button onclick="switchMonitoring('vendor-perf', this)" id="mon-btn-vendor-perf" class="sub-nav-btn uppercase whitespace-nowrap">Performa Penyedia</button>
+                <button onclick="switchMonitoring('vendor-mgmt', this)" id="mon-btn-vendor-mgmt" class="sub-nav-btn uppercase font-bold text-indigo-600 whitespace-nowrap">Data Vendor</button>
+            </div>
+            <div id="mon-paket" class="mon-view">
+                <div class="glass-card p-6 mb-6">
+                    <h3 class="text-sm font-bold text-gray-600 mb-4 text-center uppercase">Tracking Timeline Capaian Paket</h3>
+                    <select id="monPaketSelector" onchange="updatePaketTimeline()" class="w-full border rounded p-2 text-sm bg-gray-50 mb-6"></select>
+                    <div class="chart-container" style="height: 350px;"><canvas id="chartTimelinePaket"></canvas></div>
+                </div>
+                <div class="glass-card overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-left"><thead><tr><th>Nama Paket</th><th>Kontrak</th><th class="text-center">Eff %</th><th>Current Stage</th><th class="text-center">Days</th><th class="text-center">SLA</th><th>Aksi</th></tr></thead><tbody id="monPaketTable"></tbody></table></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div id="unitDetailModal" class="modal">
+        <div class="glass-card w-11/12 max-w-[95%] overflow-hidden shadow-2xl animate-fadeIn">
+            <div class="p-4 border-b flex justify-between items-center bg-blue-600 text-white"><h3 class="font-bold uppercase text-xs" id="unitModalTitle">Daftar Paket</h3><button onclick="closeModal('unitDetailModal')"><i class="fas fa-times"></i></button></div>
+            <div class="p-4 bg-slate-50"><div class="overflow-x-auto max-h-[500px]"><table class="w-full text-[9px] text-left border bg-white"><thead id="unitModalThead"></thead><tbody id="unitModalTableBody"></tbody></table></div><div class="flex justify-end mt-4"><button onclick="closeModal('unitDetailModal')" class="bg-gray-200 px-6 py-2 rounded text-xs font-bold uppercase hover:bg-gray-300">TUTUP</button></div></div>
+        </div>
+    </div>
+
+    <div id="rupUnitDetailModal" class="modal">
+        <div class="glass-card w-11/12 max-w-[95%] overflow-hidden shadow-2xl animate-fadeIn">
+            <div class="p-4 border-b flex justify-between items-center bg-blue-700 text-white">
+                <h3 class="font-bold uppercase text-xs" id="rupUnitModalTitle">Rincian Paket Rencana Umum</h3>
+                <button onclick="closeModal('rupUnitDetailModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-4 bg-slate-50">
+                <div class="overflow-x-auto max-h-[500px]">
+                    <table class="w-full text-[9px] text-left border bg-white">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border p-2">Nama Paket Pekerjaan</th>
+                                <th class="border p-2 text-right">Nilai Paket</th>
+                                <th class="border p-2">Metode Pengadaan</th>
+                                <th class="border p-2">Jenis Pengadaan</th>
+                                <th class="border p-2">Lokasi</th>
+                                <th class="border p-2 text-center">Jadwal Pemilihan</th>
+                                <th class="border p-2 text-center">Status Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rupUnitModalTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="flex justify-end mt-4">
+                    <button onclick="closeModal('rupUnitDetailModal')" class="bg-gray-200 px-6 py-2 rounded text-xs font-bold uppercase hover:bg-gray-300">TUTUP</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailModal" class="modal">
+        <div class="glass-card w-11/12 max-w-2xl overflow-hidden shadow-2xl animate-fadeIn">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50"><h3 class="font-bold text-xs" id="modalTitle">Rincian Paket</h3><button onclick="closeModal('detailModal')"><i class="fas fa-times"></i></button></div>
+            <div class="p-4"><div class="overflow-x-auto"><table class="w-full text-[11px] text-left border"><thead><tr class="bg-gray-50"><th>Item</th><th class="text-center">Vol</th><th class="text-right">Harga</th><th class="text-right">Total</th></tr></thead><tbody id="modalTableBody"></tbody></table></div><div class="flex justify-between items-center border-t pt-4"><h3 id="modalTotal" class="text-lg font-bold text-blue-600">Rp 0</h3></div><div class="flex justify-end mt-4"><button onclick="closeModal('detailModal')" class="bg-gray-200 px-6 py-1.5 rounded text-xs font-bold uppercase text-center">TUTUP</button></div></div>
+        </div>
+    </div>
+
+    <div id="vendorDetailModal" class="modal">
+        <div class="glass-card w-11/12 max-w-4xl overflow-hidden shadow-2xl animate-fadeIn">
+            <div class="p-4 border-b flex justify-between items-center bg-indigo-600 text-white"><h3 class="font-bold uppercase text-xs">Profil Penyedia</h3><button onclick="closeModal('vendorDetailModal')"><i class="fas fa-times"></i></button></div>
+            <div class="p-6 bg-slate-50">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-card p-4"><p class="text-[10px] font-bold text-gray-400 mb-2 uppercase text-center border-b pb-1">Identitas Perusahaan</p><div class="space-y-2 pt-2"><p id="vDetNama" class="font-bold text-sm text-indigo-700"></p><p id="vDetDirektur" class="text-xs font-semibold"></p><p id="vDetAlamat" class="text-[10px] text-gray-500 italic">Bandung, Jawa Barat</p></div></div>
+                    <div class="glass-card p-4"><p class="text-[10px] font-bold text-gray-400 mb-2 uppercase text-center border-b pb-1">Legalitas & Keuangan</p><div class="space-y-2 pt-2"><p id="vDetNpwp" class="text-xs font-mono"></p><p id="vDetRek" class="text-xs font-bold"></p><p id="vDetPajak" class="text-xs font-bold text-blue-600"></p></div></div>
+                </div>
+                <div class="glass-card p-4 mt-6"><p class="text-[10px] font-bold text-gray-400 mb-2 uppercase text-center border-b pb-1">KBLI Terdaftar</p><div id="vDetKbli" class="flex flex-wrap gap-2 pt-2"></div></div>
+                <div class="flex justify-end mt-6"><button onclick="closeModal('vendorDetailModal')" class="bg-gray-200 px-6 py-2 rounded text-xs font-bold hover:bg-gray-300">TUTUP PROFIL</button></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TODAY = new Date("2024-09-15");
+
+        // --- GLOBAL CHART REFS (DEFINED ONCE) ---
+        let charts = {};
+        let timelineChart = null, monPkChart = null, monPokjaChart = null, monVendorChart = null;
+
+        // --- GLOBAL HELPERS ---
+        function fIDR(a) { return a ? "Rp " + new Intl.NumberFormat('id-ID').format(a) : "-"; }
+        function fIDRCompact(a) { if(!a) return "Rp 0"; if(a>=1e9) return "Rp "+(a/1e9).toFixed(2)+" M"; if(a>=1e6) return "Rp "+(a/1e6).toFixed(1)+" Jt"; return fIDR(a); }
+        function renderStars(r) { if(!r||r<=0) return `<span class="text-slate-300 italic text-[10px]">N/A</span>`; let s = ''; for(let i=1;i<=5;i++) s += `<i class="fa${i<=Math.round(r)?'s':'r'} fa-star star-rating text-[10px]"></i>`; return `<div class="flex items-center gap-1 justify-center">${s}</div>`; }
+        
+        // --- DATASET ---
+        const unpadUnits = ["Direktorat Perencanaan, Sistem Informasi, dan Transformasi Digital", "Direktorat Keuangan dan Tresuri", "Fakultas Hukum", "Fakultas Keperawatan", "Fakultas Psikologi", "Fakultas Kedokteran", "Program Pascasarjana"];
+        const pkList = Array.from({length: 15}, (_, i) => `PK ${String(i+1).padStart(2, '0')} - Nama Personil PK`);
+        const pokjaList = Array.from({length: 10}, (_, i) => `Pokja ${String(i+1).padStart(2, '0')} - Tim Pengadaan`);
+        
+        const vendorFullData = [
+            { id: 1, nama: "PT. Jaringan Global", direktur: "Rinaldi S.T.", npwp: "01.234.567.8", rekening: "123456 (Mandiri)", kualifikasi: "Non Kecil", pajak: "PKP", status: "Aktif", kbli: ["61100", "62029"] },
+            { id: 2, nama: "CV. Bangun Jaya", direktur: "H. Maimun", npwp: "02.456.789.0", rekening: "456789 (BJB)", kualifikasi: "Kecil", pajak: "Non PKP", status: "Aktif", kbli: ["41011"] },
+            { id: 3, nama: "PT. Lab Utama", direktur: "Dr. Liana", npwp: "03.789.012.3", rekening: "789012 (BNI)", kualifikasi: "Non Kecil", pajak: "PKP", status: "Aktif", kbli: ["46691"] },
+            { id: 4, nama: "PT. Solusi IT", direktur: "Andika P.", npwp: "04.123.456.7", rekening: "012345 (BCA)", kualifikasi: "Non Kecil", pajak: "PKP", status: "Aktif", kbli: ["62019"] },
+            { id: 5, nama: "PT. Fiber Link", direktur: "Suryo K.", npwp: "05.234.567.8", rekening: "345678 (BRI)", kualifikasi: "Non Kecil", pajak: "PKP", status: "Aktif", kbli: ["61921"] },
+            { id: 6, nama: "CV. Media Sarana", direktur: "Ratna S.", npwp: "06.345.678.9", rekening: "678901 (BJB)", kualifikasi: "Kecil", pajak: "Non PKP", status: "Inkomplit", kbli: ["58110"] },
+            { id: 7, nama: "PT. Konstruksi Abadi", direktur: "Ir. Gunadi", npwp: "07.456.789.0", rekening: "901234 (Jatim)", kualifikasi: "Non Kecil", pajak: "PKP", status: "Blacklist", kbli: ["42101"] },
+            { id: 8, nama: "PT. Global Persada", direktur: "Budi S.", npwp: "08.567.890.1", rekening: "234567 (Sumut)", kualifikasi: "Non Kecil", pajak: "PKP", status: "Aktif", kbli: ["46693"] },
+            { id: 9, nama: "PT. Inovasi Negeri", direktur: "Fikri H.", npwp: "09.678.901.2", rekening: "567890 (Danamon)", kualifikasi: "Kecil", pajak: "PKP", status: "Aktif", kbli: ["62021"] },
+            { id: 10, nama: "PT. Berkah Alam", direktur: "Hj. Siti", npwp: "10.789.012.3", rekening: "890123 (Sumsel)", kualifikasi: "Kecil", pajak: "Non PKP", status: "Aktif", kbli: ["01111"] }
+        ];
+
+        const masterData = [
+            { id: 1, tahun: "2024", unit: unpadUnits[6], paket: "Perbaikan Atap Gedung Pasca", nilaiRup: 350000000, nilaiPo: 0, jenis: "Pekerjaan Konstruksi", metode: "Pengadaan Langsung", lokasi: "Bandung", tahap: "RUP", pk: pkList[14], pokja: pokjaList[9], vendor: "-", rating: 0, timeline: { RUP: "2024-09-01", PR: null, Negotiations: "2024-09-15", PO: null, REC: null, Pay: null }, items: [{n:"Atap", v:1, s:"Lot", h:350000000}] },
+            { id: 2, tahun: "2024", unit: unpadUnits[3], paket: "Pengadaan Mikroskop Lab", nilaiRup: 500000000, nilaiPo: 0, jenis: "Barang", metode: "e-Purchasing", lokasi: "Jatinangor", tahap: "PR", pk: pkList[3], pokja: pokjaList[2], vendor: "-", rating: 0, timeline: { RUP: "2024-01-10", PR: "2024-02-15", Negotiations: "2024-02-05", PO: null, REC: null, Pay: null }, items: [{n:"Mikroskop", v:10, s:"Unit", h:50000000}] },
+            { id: 3, tahun: "2024", unit: unpadUnits[2], paket: "Renovasi Ruang Sidang FH", nilaiRup: 800000000, nilaiPo: 780000000, jenis: "Pekerjaan Konstruksi", metode: "Tender", lokasi: "Bandung", tahap: "PO", pk: pkList[1], pokja: pokjaList[1], vendor: "CV. Bangun Jaya", rating: 0, timeline: { RUP: "2024-02-01", PR: "2024-03-10", Negotiations: "2024-04-05", PO: "2024-05-15", REC: null, Pay: null }, items: [{n:"Sipil", v:1, s:"Lot", h:780000000}] },
+            { id: 4, tahun: "2025", unit: unpadUnits[4], paket: "Alat Tes Psikologi Baru", nilaiRup: 150000000, nilaiPo: 0, jenis: "Barang", metode: "Pengadaan Langsung", lokasi: "Jatinangor", tahap: "RUP", pk: pkList[4], pokja: pokjaList[4], vendor: "-", rating: 0, timeline: { RUP: "2024-12-05", PR: null, Negotiations: "2024-12-15", PO: null, REC: null, Pay: null }, items: [{n:"Alat Tes", v:1, s:"Set", h:150000000}] },
+            { id: 5, tahun: "2024", unit: unpadUnits[0], paket: "Upgrade Switch Core Kampus", nilaiRup: 1200000000, nilaiPo: 1150000000, jenis: "Barang", metode: "Tender", lokasi: "All Campus", tahap: "PO", pk: pkList[0], pokja: pokjaList[0], vendor: "PT. Jaringan Global", rating: 0, timeline: { RUP: "2024-04-01", PR: "2024-05-01", Negotiations: "2024-06-01", PO: "2024-07-01", REC: null, Pay: null }, items: [{n:"Switch Core", v:2, s:"Unit", h:575000000}] },
+            { id: 16, tahun: "2024", unit: unpadUnits[0], paket: "Pemeliharaan Lift Gedung Rektorat", nilaiRup: 400000000, nilaiPo: 380000000, jenis: "Jasa Lainnya", metode: "Pengadaan Langsung", lokasi: "Bandung", tahap: "RECEIVING", pk: pkList[0], pokja: pokjaList[0], vendor: "PT. Fiber Link", rating: 4, timeline: { RUP: "2024-03-01", PR: "2024-04-01", Negotiations: "2024-04-15", PO: "2024-05-01", REC: "2024-09-10", Pay: null }, items: [{n:"Service Lift", v:1, s:"Tahun", h:380000000}] },
+            { id: 17, tahun: "2024", unit: unpadUnits[5], paket: "Kursi Kuliah FK Jatinangor", nilaiRup: 600000000, nilaiPo: 580000000, jenis: "Barang", metode: "e-Purchasing", lokasi: "Jatinangor", tahap: "RECEIVING", pk: pkList[2], pokja: pokjaList[1], vendor: "CV. Bangun Jaya", rating: 4, timeline: { RUP: "2024-05-01", PR: "2024-06-01", Negotiations: "2024-06-15", PO: "2024-07-01", REC: "2024-09-12", Pay: null }, items: [{n:"Kursi", v:500, s:"Unit", h:1160000}] },
+            { id: 6, tahun: "2024", unit: unpadUnits[0], paket: "Server Data Center 2024", nilaiRup: 1500000000, nilaiPo: 1200000000, jenis: "Barang", metode: "e-Purchasing", lokasi: "Bandung", tahap: "PAYMENT", pk: pkList[0], pokja: pokjaList[0], vendor: "PT. Jaringan Global", rating: 5, timeline: { RUP: "2024-01-10", PR: "2024-01-25", Negotiations: "2024-02-05", PO: "2024-02-15", REC: "2024-03-01", Pay: "2024-03-15" }, items: [{n:"Server", v:2, s:"Unit", h:600000000}] },
+            { id: 7, tahun: "2024", unit: unpadUnits[5], paket: "Alat Kedokteran Gigi", nilaiRup: 3000000000, nilaiPo: 2900000000, jenis: "Barang", metode: "Tender", lokasi: "Jatinangor", tahap: "PAYMENT", pk: pkList[2], pokja: pokjaList[2], vendor: "PT. Lab Utama", rating: 4.5, timeline: { RUP: "2024-03-01", PR: "2024-03-20", Negotiations: "2024-04-15", PO: "2024-05-10", REC: "2024-08-01", Pay: "2024-09-01" }, items: [{n:"Alat", v:1, s:"Set", h:2900000000}] },
+            { id: 8, tahun: "2024", unit: unpadUnits[1], paket: "Lisensi Database Oracle", nilaiRup: 500000000, nilaiPo: 480000000, jenis: "Jasa Konsultansi", metode: "Pengadaan Langsung", lokasi: "Bandung", tahap: "PAYMENT", pk: pkList[3], pokja: pokjaList[3], vendor: "PT. Solusi IT", rating: 5, timeline: { RUP: "2024-01-05", PR: "2024-01-15", Negotiations: "2024-01-25", PO: "2024-02-01", REC: "2024-02-15", Pay: "2024-02-28" }, items: [{n:"Lisensi", v:1, s:"Pkg", h:480000000}] },
+            { id: 9, tahun: "2024", unit: unpadUnits[1], paket: "Audit Keuangan Eksternal", nilaiRup: 450000000, nilaiPo: 440000000, jenis: "Jasa Konsultansi", metode: "Penunjukan Langsung", lokasi: "Bandung", tahap: "PAYMENT", pk: pkList[3], pokja: pokjaList[6], vendor: "PT. Inovasi Negeri", rating: 4, timeline: { RUP: "2024-01-10", PR: "2024-01-20", Negotiations: "2024-02-01", PO: "2024-02-10", REC: "2024-04-01", Pay: "2024-04-15" }, items: [{n:"Audit", v:1, s:"Lot", h:440000000}] },
+            { id: 10, tahun: "2024", unit: unpadUnits[0], paket: "Managed Service Network", nilaiRup: 600000000, nilaiPo: 550000000, jenis: "Jasa Lainnya", metode: "e-Purchasing", lokasi: "Jatinangor", tahap: "PAYMENT", pk: pkList[0], pokja: pokjaList[0], vendor: "PT. Jaringan Global", rating: 3.5, timeline: { RUP: "2024-02-10", PR: "2024-02-20", Negotiations: "2024-03-01", PO: "2024-03-10", REC: "2024-08-01", Pay: "2024-08-15" }, items: [{n:"MS", v:1, s:"Bln", h:550000000}] },
+            { id: 11, tahun: "2024", unit: unpadUnits[2], paket: "Perpustakaan Digital FH", nilaiRup: 250000000, nilaiPo: 240000000, jenis: "Barang", metode: "Pengadaan Langsung", lokasi: "Bandung", tahap: "PAYMENT", pk: pkList[1], pokja: pokjaList[4], vendor: "CV. Media Sarana", rating: 5, timeline: { RUP: "2024-02-15", PR: "2024-03-01", Negotiations: "2024-03-10", PO: "2024-03-20", REC: "2024-05-01", Pay: "2024-05-15" }, items: [{n:"App", v:1, s:"Set", h:240000000}] },
+            { id: 12, tahun: "2024", unit: unpadUnits[3], paket: "Buku Ajar Keperawatan", nilaiRup: 100000000, nilaiPo: 95000000, jenis: "Barang", metode: "Pengadaan Langsung", lokasi: "Jatinangor", tahap: "PAYMENT", pk: pkList[3], pokja: pokjaList[2], vendor: "PT. Berkah Alam", rating: 4, timeline: { RUP: "2024-01-15", PR: "2024-02-01", Negotiations: "2024-02-10", PO: "2024-02-20", REC: "2024-04-10", Pay: "2024-04-20" }, items: [{n:"Buku", v:200, s:"Eks", h:475000}] },
+            { id: 13, tahun: "2024", unit: unpadUnits[4], paket: "Renovasi Taman Psikologi", nilaiRup: 200000000, nilaiPo: 195000000, jenis: "Pekerjaan Konstruksi", metode: "Pengadaan Langsung", lokasi: "Jatinangor", tahap: "PAYMENT", pk: pkList[4], pokja: pokjaList[4], vendor: "CV. Bangun Jaya", rating: 4, timeline: { RUP: "2024-03-01", PR: "2024-04-01", Negotiations: "2024-04-15", PO: "2024-05-01", REC: "2024-07-01", Pay: "2024-07-15" }, items: [{n:"Taman", v:1, s:"Lot", h:195000000}] }
+        ];
+
+        // --- NAVIGATION ---
+        function showPage(p, el) { 
+            document.querySelectorAll('.page-section').forEach(x => x.classList.remove('active')); 
+            const t = document.getElementById('page-' + p); if(t) t.classList.add('active'); 
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); 
+            if(el) el.classList.add('active'); 
+            updateDashboard(); 
+        }
+
+        function switchMonitoring(v, btn) { 
+            document.querySelectorAll('.mon-view').forEach(x => x.classList.add('hidden')); 
+            const t = document.getElementById('mon-' + v); if(t) t.classList.remove('hidden'); 
+            document.querySelectorAll('.sub-nav-btn').forEach(b => b.classList.remove('active')); 
+            if(btn) btn.classList.add('active'); 
+            updateDashboard(); 
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // --- POPULATE UTILS ---
+        function populateGenericTable(id, data, min, val, color, key) {
+            const tbody = document.getElementById(id); if(!tbody) return;
+            const stages = ['RUP','PR','PO','RECEIVING','PAYMENT'];
+            const minIdx = stages.indexOf(min);
+            tbody.innerHTML = data.filter(d => stages.indexOf(d.tahap) >= minIdx).map(d => `<tr><td>${d.tahun}</td><td class="font-bold text-blue-600 cursor-pointer" onclick="openDetail(${d.id})">${d.paket}</td><td>${fIDR(d[val])}</td><td>${d.unit.substring(0,25)}...</td><td>${d.metode}</td><td class="font-semibold text-slate-600 text-xs text-center">${d.timeline[key] || "-"}</td><td><span class="bg-${color}-100 text-${color}-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">${d.tahap}</span></td></tr>`).join("");
+        }
+
+        function populateUnitTable(data) {
+            const tbody = document.getElementById('unitTableBody'); if(!tbody) return;
+            tbody.innerHTML = unpadUnits.map(u => {
+                const ud = data.filter(x => x.unit === u);
+                const reqs = ud.filter(d => ['PR','PO','RECEIVING','PAYMENT'].includes(d.tahap));
+                const pos = ud.filter(d => ['PO','RECEIVING','PAYMENT'].includes(d.tahap));
+                const recs = ud.filter(d => ['RECEIVING','PAYMENT'].includes(d.tahap));
+                const pays = ud.filter(d => d.tahap === 'PAYMENT');
+                const valReq = reqs.reduce((a,c)=>a+c.nilaiRup, 0);
+                const valPo = pos.reduce((a,c)=>a+c.nilaiPo, 0);
+                const valRec = recs.reduce((a,c)=>a+c.nilaiPo, 0);
+                const valPay = pays.reduce((a,c)=>a+c.nilaiPo, 0);
+                const rupForPo = pos.reduce((a,c)=>a+c.nilaiRup, 0);
+                const eff = rupForPo > 0 ? ((rupForPo - valPo) / rupForPo * 100).toFixed(1) : 0;
+                return `<tr><td class="font-bold text-blue-600 cursor-pointer border-r hover:underline text-[10px]" onclick="openUnitDetail('${u}', 'unit')">${u}</td><td class="text-center bg-indigo-50/50">${reqs.length}</td><td class="text-right border-r bg-indigo-50/50 text-[10px] font-semibold">${fIDR(valReq)}</td><td class="text-center bg-emerald-50/50">${pos.length}</td><td class="text-right border-r bg-emerald-50/50 text-[10px] font-semibold">${fIDR(valPo)}</td><td class="text-center bg-amber-50/50 font-bold text-amber-700">${recs.length}</td><td class="text-right border-r bg-amber-50/50 text-[10px] text-amber-700 font-bold">${fIDR(valRec)}</td><td class="text-center bg-purple-50/50 font-bold text-purple-700">${pays.length}</td><td class="text-right border-r bg-purple-50/50 text-[10px] font-bold text-purple-700">${fIDR(valPay)}</td><td class="text-center font-bold text-green-600 bg-green-50/50 text-[10px]">${eff}%</td></tr>`;
+            }).join("");
+        }
+
+        function populateRupSummaryTable(data) {
+            const tbody = document.getElementById('rupSummaryTableBody'); if(!tbody) return;
+            const currentYearFilter = document.getElementById('filterTahun').value;
+            const defaultYear = currentYearFilter === "Semua" ? "2024" : currentYearFilter;
+
+            tbody.innerHTML = unpadUnits.map(u => {
+                const ud = data.filter(x => x.unit === u);
+                const totalNilai = ud.reduce((acc, c) => acc + c.nilaiRup, 0);
+                return `<tr class="hover:bg-gray-50">
+                    <td class="text-center text-[10px] font-semibold">${defaultYear}</td>
+                    <td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="openRupUnitDetail('${u}')">${u}</td>
+                    <td class="text-center font-bold">${ud.length} Paket</td>
+                    <td class="text-right font-bold text-slate-700">${fIDR(totalNilai)}</td>
+                </tr>`;
+            }).join("");
+        }
+
+        function populateRecTable(data) {
+            const tbody = document.getElementById('recDetailTable'); if(!tbody) return;
+            tbody.innerHTML = data.filter(d => ['RECEIVING','PAYMENT'].includes(d.tahap)).map(d => {
+                const totalVol = d.items.reduce((a,b)=>a+b.v, 0); const sdh = d.tahap==='PAYMENT'?totalVol:Math.floor(totalVol*0.7);
+                return `<tr><td>${d.tahun}</td><td class="font-bold text-blue-600 cursor-pointer" onclick="openDetail(${d.id})">${d.paket}</td><td class="text-center font-bold text-green-600 text-xs">${sdh} Item</td><td class="text-center font-bold text-amber-600 text-xs">${((totalVol-sdh)/totalVol*100).toFixed(0)}%</td><td class="font-semibold text-slate-600 text-xs text-center">${d.timeline.REC || "-"}</td><td><span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">${d.tahap}</span></td></tr>`;
+            }).join("");
+        }
+
+        // --- DASHBOARD REFRESH MAIN ---
+        function updateDashboard() {
+            const year = document.getElementById('filterTahun').value;
+            const unit = document.getElementById('filterUnit').value;
+            const methods = document.getElementById('filterMetode').value;
+            const types = document.getElementById('filterJenis').value;
+            const search = document.getElementById('filterSearch').value.toLowerCase();
+
+            const filtered = masterData.filter(d => 
+                (year === "Semua" || d.tahun === year) && 
+                (unit === "Semua" || d.unit === unit) && 
+                (methods === "Semua" || d.metode === methods) &&
+                (types === "Semua" || d.jenis === types) &&
+                (d.paket.toLowerCase().includes(search))
+            );
+
+            const stats = { RUP:{q:0,v:0}, PR:{q:0,v:0}, PO:{q:0,v:0}, REC:{q:0,v:0}, PAY:{q:0,v:0} };
+            filtered.forEach(d => {
+                stats.RUP.q++; stats.RUP.v += d.nilaiRup;
+                if(['PR','PO','RECEIVING','PAYMENT'].includes(d.tahap)) { stats.PR.q++; stats.PR.v += d.nilaiRup; }
+                if(['PO','RECEIVING','PAYMENT'].includes(d.tahap)) { stats.PO.q++; stats.PO.v += d.nilaiPo; }
+                if(['RECEIVING','PAYMENT'].includes(d.tahap)) { stats.REC.q++; stats.REC.v += d.nilaiPo; }
+                if(d.tahap === 'PAYMENT') { stats.PAY.q++; stats.PAY.v += d.nilaiPo; }
+            });
+
+            const updateTxt = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+            updateTxt('badgeRupQty', stats.RUP.q + " Pkt"); updateTxt('badgeRupVal', fIDRCompact(stats.RUP.v));
+            updateTxt('badgePrQty', stats.PR.q + " Pkt"); updateTxt('badgePrVal', fIDRCompact(stats.PR.v));
+            updateTxt('badgePoQty', stats.PO.q + " Pkt"); updateTxt('badgePoVal', fIDRCompact(stats.PO.v));
+            updateTxt('badgeRecQty', stats.REC.q + " Pkt"); updateTxt('badgeRecVal', fIDRCompact(stats.REC.v));
+            updateTxt('badgePayQty', stats.PAY.q + " Pkt"); updateTxt('badgePayVal', fIDRCompact(stats.PAY.v));
+            const sav = stats.RUP.v - stats.PO.v;
+            updateTxt('badgeSavingsVal', fIDRCompact(sav > 0 ? sav : 0));
+            updateTxt('badgeSavingsPct', (stats.RUP.v > 0 ? ((sav/stats.RUP.v)*100).toFixed(1) : 0) + "% Saving");
+
+            // Page summaries
+            updateTxt('pageRupQty', stats.RUP.q + " Paket"); updateTxt('pageRupVal', fIDR(stats.RUP.v));
+            updateTxt('pagePrQty', stats.PR.q + " Paket"); updateTxt('pagePrVal', fIDR(stats.PR.v));
+            updateTxt('pagePoQty', stats.PO.q + " Paket"); updateTxt('pagePoVal', fIDR(stats.PO.v));
+            updateTxt('pageRecQty', stats.REC.q + " Paket"); updateTxt('pageRecVal', fIDR(stats.REC.v));
+            updateTxt('pagePayQty', stats.PAY.q + " Paket"); updateTxt('pagePayVal', fIDR(stats.PAY.v));
+
+            populateUnitTable(filtered);
+            populateRupSummaryTable(filtered);
+            populateGenericTable('prDetailTable', filtered, 'PR', 'nilaiRup', 'indigo', 'PR');
+            populateGenericTable('poDetailTable', filtered, 'PO', 'nilaiPo', 'emerald', 'PO');
+            populateRecTable(filtered);
+            populateGenericTable('payDetailTable', filtered, 'PAYMENT', 'nilaiPo', 'purple', 'Pay');
+
+            updateHomeCharts(filtered);
+            updateRupPageCharts(filtered);
+            updateMonitoringViews(filtered);
+            updateVendorManagementPage(search);
+        }
+
+        // --- OPEN MODAL RUP UNIT DETAIL ---
+        function openRupUnitDetail(u) {
+            const elTitle = document.getElementById('rupUnitModalTitle');
+            if(elTitle) elTitle.innerText = 'Rincian Paket Rencana Umum: ' + u;
+            const filtered = masterData.filter(x => x.unit === u);
+            const tbody = document.getElementById('rupUnitModalTableBody');
+            if(tbody) tbody.innerHTML = filtered.length > 0 ? filtered.map(p => {
+                return `<tr class="hover:bg-gray-50">
+                    <td class="p-2 border font-bold text-slate-700 text-[10px]">${p.paket}</td>
+                    <td class="p-2 border text-right text-[10px] font-bold">${fIDR(p.nilaiRup)}</td>
+                    <td class="p-2 border text-[10px]">${p.metode}</td>
+                    <td class="p-2 border text-[10px]">${p.jenis}</td>
+                    <td class="p-2 border text-[10px]">${p.lokasi}</td>
+                    <td class="p-2 border text-center font-mono text-[10px]">${p.timeline.Negotiations || "-"}</td>
+                    <td class="p-2 border text-center text-[10px]">
+                        <span class="px-2 py-0.5 rounded text-[8px] font-bold uppercase ${p.tahap === 'RUP' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}">
+                            ${p.tahap === 'RUP' ? 'Belum diajukan' : 'Sudah diajukan'}
+                        </span>
+                    </td>
+                </tr>`;
+            }).join("") : `<tr><td colspan="7" class="p-4 text-center text-gray-400 italic text-[10px]">Belum ada data perencanaan.</td></tr>`;
+            document.getElementById('rupUnitDetailModal').classList.add('active');
+        }
+
+        function openUnitDetail(u, context) {
+            const elTitle = document.getElementById('unitModalTitle');
+            if(elTitle) elTitle.innerText = 'Riwayat Paket: ' + u;
+            const filtered = masterData.filter(x => x.unit === u);
+            const thead = document.getElementById('unitModalThead');
+            if(thead) thead.innerHTML = `<tr class="bg-gray-100 uppercase text-center text-[8px]"><th class="border p-2">Nama Paket</th><th class="border p-2 bg-indigo-50">Tgl Req</th><th class="border p-2 bg-indigo-50">Nilai Req</th><th class="border p-2 bg-emerald-50">Tgl PO</th><th class="border p-2 bg-emerald-50">Nilai PO</th><th class="border p-2 bg-amber-50">Tgl REC</th><th class="border p-2 bg-amber-50">Nilai REC</th><th class="border p-2 bg-purple-50">Tgl Pay</th><th class="border p-2 bg-purple-50">Nilai Pay</th><th class="border p-2 bg-green-50">Eff</th></tr>`;
+            const tbody = document.getElementById('unitModalTableBody');
+            if(tbody) tbody.innerHTML = filtered.map(p => { const isRec = (['RECEIVING', 'PAYMENT'].includes(p.tahap)); const isPay = (p.tahap === 'PAYMENT'); return `<tr class="hover:bg-gray-50 text-[8px]"><td class="p-2 border font-bold">${p.paket}</td><td class="p-2 border text-center">${p.timeline.PR || "-"}</td><td class="p-2 border text-right">${p.timeline.PR ? fIDR(p.nilaiRup) : "-"}</td><td class="p-2 border text-center">${p.timeline.PO || "-"}</td><td class="p-2 border text-right">${p.nilaiPo > 0 ? fIDR(p.nilaiPo) : "-"}</td><td class="p-2 border text-center">${p.timeline.REC || "-"}</td><td class="p-2 border text-right">${isRec ? fIDR(p.nilaiPo) : "-"}</td><td class="p-2 border text-center">${p.timeline.Pay || "-"}</td><td class="p-2 border text-center">${isPay ? fIDR(p.nilaiPo) : "-"}</td><td class="p-2 border text-center font-bold">${p.nilaiPo > 0 ? ((p.nilaiRup-p.nilaiPo)/p.nilaiRup*100).toFixed(1)+'%' : '0%'}</td></tr>`; }).join("");
+            document.getElementById('unitDetailModal').classList.add('active');
+        }
+
+        // --- CHARTING ---
+        function updateRupPageCharts(data) {
+            const resetChart = (id, config) => { if(charts[id]) charts[id].destroy(); const el = document.getElementById(id); if(el) charts[id] = new Chart(el, config); };
+            const unitSummary = unpadUnits.map(u => {
+                const ud = data.filter(d => d.unit === u);
+                return { label: u.substring(0,10)+'..', q: ud.length, v: ud.reduce((a,c)=>a+c.nilaiRup,0), fullLabel: u };
+            });
+
+            resetChart('chartRupUnit', {
+                type: 'bar',
+                data: {
+                    labels: unitSummary.map(s => s.label),
+                    datasets: [
+                        { label: 'Jumlah Paket', data: unitSummary.map(s => s.q), backgroundColor: '#3b82f6', xAxisID: 'x' },
+                        { label: 'Nilai Pagu (Miliar)', data: unitSummary.map(s => s.v/1e9), backgroundColor: '#10b981', xAxisID: 'x1' }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    scales: { x: { type: 'linear', position: 'bottom' }, x1: { type: 'linear', position: 'top', grid: { drawOnChartArea: false } } },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { mode: 'index', intersect: false, callbacks: { label: (c) => c.datasetIndex === 0 ? ` Unit: ${unitSummary[c.dataIndex].fullLabel}\n Jumlah: ${c.raw} Paket` : ` Total Pagu: ${fIDR(unitSummary[c.dataIndex].v)}` } }
+                    }
+                }
+            });
+
+            const sudahLanjut = data.filter(d => d.tahap !== 'RUP').length;
+            const belumLanjut = data.filter(d => d.tahap === 'RUP').length;
+
+            const gaugePlugin = {
+                id: 'gaugeText',
+                afterDraw: (chart) => {
+                    if (chart.config.type !== 'doughnut') return;
+                    const { ctx, chartArea: { top, height, left, width } } = chart;
+                    ctx.save();
+                    const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                    const val = chart.data.datasets[0].data[0];
+                    const percentage = total > 0 ? ((val / total) * 100).toFixed(0) + "%" : "0%";
+                    ctx.font = 'bold 30px Inter'; ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center';
+                    ctx.fillText(percentage, left + width / 2, top + height / 2 + 10);
+                    ctx.font = '10px Inter'; ctx.fillStyle = '#64748b';
+                    ctx.fillText('PROGRES', left + width / 2, top + height / 2 - 20);
+                    ctx.restore();
+                }
+            };
+
+            resetChart('chartRupProgres', { 
+                type: 'doughnut', 
+                data: { labels: ['Sudah diajukan', 'Belum diajukan'], datasets: [{ data: [sudahLanjut, belumLanjut], backgroundColor: ['#6366f1', '#e2e8f0'], borderWidth: 0, borderRadius: 10, spacing: 5 }] }, 
+                options: { responsive: true, maintainAspectRatio: false, cutout: '80%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } },
+                plugins: [gaugePlugin]
+            });
+        }
+
+        function updateHomeCharts(data) {
+            const getMapData = (field) => {
+                const map = data.reduce((a,c)=>{ if(!a[c[field]]) a[c[field]] = {q:0, v:0}; a[c[field]].q++; a[c[field]].v += c.nilaiRup; return a; }, {});
+                return { l: Object.keys(map), q: Object.values(map).map(x=>x.q), v: Object.values(map).map(x=>x.v) };
+            };
+            const resetChart = (id, config) => { if(charts[id]) charts[id].destroy(); const el = document.getElementById(id); if(el) charts[id] = new Chart(el, config); };
+            const jD = getMapData('jenis');
+            resetChart('chartJenis', { type: 'bar', data: { labels: jD.l, datasets: [{ label: 'Paket', data: jD.q, backgroundColor: '#3b82f6' }] }, options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => [` Jumlah: ${c.raw} Pkt`, ` Nilai: ${fIDR(jD.v[c.dataIndex])}`] } } } } });
+            const mD = getMapData('metode');
+            resetChart('chartMetode', { type: 'bar', data: { labels: mD.l, datasets: [{ label: 'Paket', data: mD.q, backgroundColor: '#f59e0b' }] }, options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => [` Jumlah: ${c.raw} Pkt`, ` Nilai: ${fIDR(jD.v[c.dataIndex])}`] } } } } });
+            const uD = getMapData('unit');
+            resetChart('chartUnitUsulan', { type: 'pie', data: { labels: uD.l.map(l=>l.substring(0,12)+'..'), datasets: [{ data: uD.q, backgroundColor: ['#3b82f6', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#14b8a6', '#f43f5e'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => [` Unit: ${uD.l[c.dataIndex]}`, ` Jumlah: ${c.raw} Pkt`, ` Nilai: ${fIDR(uD.v[c.dataIndex])}`] } } } } });
+            const progresData = unpadUnits.map(u => { const total = data.filter(d => d.unit === u && ['PR','PO','RECEIVING','PAYMENT'].includes(d.tahap)); const exec = data.filter(d => d.unit === u && ['PO','RECEIVING','PAYMENT'].includes(d.tahap)); return { l: u.substring(0,10)+'..', tQ: total.length, tV: total.reduce((a,c)=>a+c.nilaiRup,0), eQ: exec.length, eV: exec.reduce((a,c)=>a+c.nilaiPo,0) }; });
+            resetChart('chartUnitProgres', { type: 'bar', data: { labels: progresData.map(d=>d.l), datasets: [{ label: 'Total PR', data: progresData.map(d=>d.tQ), backgroundColor: '#cbd5e1' }, { label: 'Executed (PO)', data: progresData.map(d=>d.eQ), backgroundColor: '#6366f1' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (c) => [` ${c.dataset.label}: ${c.raw} Pkt`, ` Nilai: ${fIDR(c.datasetIndex === 0 ? progresData[c.dataIndex].tV : progresData[c.dataIndex].eV)}`] } } } } });
+        }
+
+        function updateMonitoringViews(data) {
+            const sel = document.getElementById('monPaketSelector');
+            const tab = document.getElementById('monPaketTable');
+            if(sel && tab) {
+                sel.innerHTML = data.map(d => `<option value="${d.id}">${d.paket}</option>`).join("");
+                tab.innerHTML = data.map(d => {
+                    const lastKey = Object.keys(d.timeline).filter(k => d.timeline[k] !== null).pop();
+                    const lastDate = d.timeline[lastKey] ? new Date(d.timeline[lastKey]) : TODAY;
+                    const days = Math.ceil(Math.abs(TODAY - lastDate) / (1000*60*60*24));
+                    const eff = d.nilaiPo > 0 ? (((d.nilaiRup - d.nilaiPo) / d.nilaiRup) * 100).toFixed(1) : "-";
+                    let slaBg = days > 14 ? 'bg-red-100 text-red-600' : (days > 7 ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600');
+                    return `<tr><td><div class="font-bold text-slate-700 text-xs">${d.paket}</div></td><td>${fIDR(d.nilaiPo)}</td><td class="text-center font-bold text-green-600">${eff !== "-" ? eff + "%" : "-"}</td><td class="text-[10px] font-bold text-blue-600 uppercase italic">${d.tahap}</td><td class="text-center font-bold">${days} Hari</td><td class="text-center"><span class="${slaBg} px-2 py-0.5 rounded text-[9px] font-bold uppercase">${days>14?'Over':(days>7?'Warn':'Aman')}</span></td><td><button onclick="openDetail(${d.id})" class="text-blue-600 font-bold text-xs uppercase">Detail</button></td></tr>`;
+                }).join("");
+            }
+        }
+
+        function updateVendorManagementPage(q) {
+            const fv = vendorFullData.filter(v => v.nama.toLowerCase().includes(q));
+            const tbody = document.getElementById('masterVendorTableBody'); if(!tbody) return;
+            tbody.innerHTML = fv.map(v => `<tr><td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="openVendorDetail(${v.id})">${v.nama}</td><td>${v.kualifikasi}</td><td>${v.pajak}</td><td>${v.kbli[0]}</td><td class="text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${v.status==='Aktif'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}">${v.status}</span></td><td><button onclick="openVendorDetail(${v.id})" class="text-indigo-600 font-bold text-xs uppercase hover:underline">Profil</button></td></tr>`).join("");
+        }
+
+        function openDetail(id) {
+            const d = masterData.find(x => x.id === id); if(!d) return;
+            document.getElementById('modalTitle').innerText = 'Rincian: ' + d.paket;
+            document.getElementById('modalTableBody').innerHTML = d.items.map(it => `<tr><td class="p-2 border-b">${it.n}</td><td class="text-center p-2 border-b">${it.v} ${it.s}</td><td class="text-right p-2 border-b text-xs">${fIDR(it.h)}</td><td class="text-right p-2 border-b font-bold text-xs">${fIDR(it.v * it.h)}</td></tr>`).join("");
+            document.getElementById('modalTotal').innerText = fIDR(d.nilaiRup); document.getElementById('detailModal').classList.add('active');
+        }
+
+        function openVendorDetail(id) {
+            const v = vendorFullData.find(x => x.id === id); if(!v) return;
+            document.getElementById('vDetNama').innerText = v.nama;
+            document.getElementById('vDetDirektur').innerText = "Direktur: " + v.direktur;
+            document.getElementById('vDetNpwp').innerText = "NPWP: " + v.npwp;
+            document.getElementById('vDetRek').innerText = "Rekening: " + v.rekening;
+            document.getElementById('vDetPajak').innerText = v.pajak;
+            document.getElementById('vDetKbli').innerHTML = v.kbli.map(k => `<span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-[9px] font-bold border border-indigo-200">${k}</span>`).join("");
+            document.getElementById('vendorDetailModal').classList.add('active');
+        }
+
+        function updatePaketTimeline() {
+            const id = document.getElementById('monPaketSelector').value;
+            const item = masterData.find(d => d.id == id); if(!item) return;
+            const stages = ["RUP", "PR", "Negotiations", "PO", "REC", "Pay"];
+            const dates = stages.map(s => item.timeline[s] ? new Date(item.timeline[s]) : null);
+            if(timelineChart) timelineChart.destroy();
+            timelineChart = new Chart(document.getElementById('chartTimelinePaket').getContext('2d'), { type: 'line', data: { labels: stages, datasets: [{ label: 'Capaian', data: dates, borderColor: '#3b82f6', pointRadius: 8, fill: true, tension: 0.1, spanGaps: false }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { type: 'time', time: { unit: 'day' } } } } });
+        }
+
+        function resetFilters() { 
+            document.getElementById('filterTahun').value = "Semua"; document.getElementById('filterUnit').value = "Semua"; 
+            document.getElementById('filterMetode').value = "Semua"; document.getElementById('filterJenis').value = "Semua"; 
+            document.getElementById('filterSearch').value = ""; updateDashboard(); 
+        }
+
+        window.onload = () => {
+            const optCont = document.getElementById('unitListOptions');
+            if(optCont) optCont.outerHTML = unpadUnits.map(u => `<option value="${u}">${u}</option>`).join("");
+            updateDashboard();
+        };
+    </script>
+</body>
+</html>
