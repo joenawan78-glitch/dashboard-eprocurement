@@ -38,6 +38,15 @@
         .page-section { display: none; }
         .page-section.active { display: block; animation: fadeIn 0.4s ease-out; }
 
+        /* Sub-Page Navigation for Monitoring */
+        .mon-sub-nav { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        .mon-tab { padding: 8px 16px; font-size: 0.75rem; font-weight: 600; color: #64748b; background: white; border: 1px solid #e2e8f0; border-radius: 20px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .mon-tab:hover { background: #f1f5f9; color: #1e293b; }
+        .mon-tab.active { background: #1e293b; color: white; border-color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .mon-sub-page { display: none; }
+        .mon-sub-page.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .badge-card { border-left-width: 4px; padding: 1rem; display: flex; flex-direction: column; justify-content: center; min-height: 95px; }
@@ -50,10 +59,12 @@
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal.active { display: flex; }
 
-        .sub-nav-btn { padding: 8px 16px; border-radius: 8px; font-size: 0.7rem; font-weight: 700; color: #64748b; transition: all 0.2s; border: 1px solid #e2e8f0; background: white; }
-        .sub-nav-btn.active { background-color: #1e293b; color: white; border-color: #1e293b; }
-
         .star-rating { color: #fbbf24; }
+        .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        
+        /* Highlight row on hover for Monitoring Table */
+        .mon-row:hover { background-color: #f0f9ff !important; cursor: pointer; }
+        .mon-row.selected { background-color: #e0f2fe !important; border-left: 4px solid #0ea5e9; }
     </style>
 </head>
 <body>
@@ -80,8 +91,8 @@
     </nav>
 
     <div class="main-content">
-        <!-- GLOBAL FILTERS -->
-        <header class="glass-card p-4 mb-6 flex flex-col gap-4">
+        <!-- GLOBAL FILTERS (Hanya tampil di halaman non-monitoring agar tidak redundan) -->
+        <header id="globalFilterHeader" class="glass-card p-4 mb-6 flex flex-col gap-4">
             <div class="flex flex-wrap gap-3 items-end w-full">
                 <div class="flex-1 min-w-[100px]">
                     <label class="block text-[9px] font-bold text-gray-500 mb-1 uppercase">Tahun</label>
@@ -227,7 +238,6 @@
             </div>
         </div>
 
-        <!-- PAGE: PAYMENT (PERFECTED) -->
         <div id="page-pay" class="page-section">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div class="glass-card p-4 border-l-4 border-purple-600"><p class="text-[10px] font-bold text-gray-500 uppercase">Jumlah Paket Terbayar</p><h2 id="pagePayQty" class="text-xl font-bold text-purple-700">0 Paket</h2></div>
@@ -266,9 +276,150 @@
             </div>
         </div>
 
+        <!-- HALAMAN MONITORING YANG DIPERBAHARUI -->
         <div id="page-monitoring" class="page-section">
-            <div class="glass-card p-6 mb-6"><h3 class="text-sm font-bold text-gray-600 mb-4 text-center uppercase">Tracking Timeline Capaian Paket</h3><select id="monPaketSelector" onchange="updatePaketTimeline()" class="w-full border rounded p-2 text-sm bg-gray-50 mb-6"></select><div class="chart-container" style="height: 350px;"><canvas id="chartTimelinePaket"></canvas></div></div>
-            <div class="glass-card overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-left"><thead><tr><th>Nama Paket</th><th>Kontrak</th><th class="text-center">Eff %</th><th>Stage</th><th class="text-center">Days</th><th class="text-center">SLA</th><th>Aksi</th></tr></thead><tbody id="monPaketTable"></tbody></table></div></div>
+            <!-- Sub Navigation -->
+            <div class="mon-sub-nav">
+                <div class="mon-tab active" onclick="showMonSubPage('paket', this)">Paket Pekerjaan</div>
+                <div class="mon-tab" onclick="showMonSubPage('ppk', this)">Pembuat Komitmen</div>
+                <div class="mon-tab" onclick="showMonSubPage('pokja', this)">PP/Pokja</div>
+                <div class="mon-tab" onclick="showMonSubPage('vendor', this)">Monitoring Vendor</div>
+                <div class="mon-tab" onclick="showMonSubPage('mgmt', this)">Manajemen Vendor</div>
+            </div>
+
+            <!-- 1. Monitoring Paket Pekerjaan -->
+            <div id="mon-sub-paket" class="mon-sub-page active">
+                <div class="glass-card p-4 mb-4">
+                    <!-- Filter Section (Tanpa Label Visualisasi) -->
+                    <div class="flex flex-wrap gap-3 items-end mb-4 bg-gray-50 p-3 rounded border">
+                        <div class="flex-1 min-w-[200px]">
+                             <label class="text-[9px] font-bold text-gray-500 uppercase">Nama Paket Pekerjaan</label>
+                             <input type="text" id="filterMonPaketNama" oninput="renderMonPaket()" class="w-full border rounded p-1.5 text-xs" placeholder="Cari nama paket...">
+                        </div>
+                        <div class="flex-1 min-w-[150px]">
+                             <label class="text-[9px] font-bold text-gray-500 uppercase">Nomor Requisitions</label>
+                             <input type="text" id="filterMonPaketPR" oninput="renderMonPaket()" class="w-full border rounded p-1.5 text-xs" placeholder="No. PR...">
+                        </div>
+                        <div class="flex-1 min-w-[150px]">
+                             <label class="text-[9px] font-bold text-gray-500 uppercase">Nomor Purchase Orders</label>
+                             <input type="text" id="filterMonPaketPO" oninput="renderMonPaket()" class="w-full border rounded p-1.5 text-xs" placeholder="No. PO...">
+                        </div>
+                    </div>
+                    
+                    <!-- Grafik Timeline -->
+                    <div class="chart-container" style="height: 300px;"><canvas id="chartTimelinePaket"></canvas></div>
+                </div>
+                <div class="glass-card overflow-hidden">
+                    <div class="p-3 bg-blue-50 border-b flex justify-between items-center">
+                        <h4 class="text-xs font-bold text-blue-800 uppercase">Daftar Paket (Klik baris untuk melihat Timeline)</h4>
+                    </div>
+                    <div class="overflow-x-auto"><table class="w-full text-left"><thead><tr><th>Nama Paket</th><th class="text-center">No. PR / PO</th><th>Nilai Kontrak</th><th class="text-center">Eff %</th><th>Stage</th><th class="text-center">Durasi</th><th class="text-center">SLA</th><th>Aksi</th></tr></thead><tbody id="monPaketTable"></tbody></table></div>
+                </div>
+            </div>
+
+            <!-- 2. Monitoring Pembuat Komitmen (PPK) -->
+            <div id="mon-sub-ppk" class="mon-sub-page">
+                <div class="glass-card p-4 mb-4">
+                     <!-- Updated Filters for PPK -->
+                     <div class="flex gap-3 mb-4 bg-gray-50 p-3 rounded border items-end">
+                        <div class="flex-1">
+                            <label class="text-[9px] font-bold text-gray-500 uppercase">Cari Nama PPK</label>
+                            <input type="text" id="filterMonPPK" oninput="renderMonPPK()" class="w-full border rounded p-1.5 text-xs" placeholder="Ketik nama PPK...">
+                        </div>
+                        <div class="w-1/4">
+                            <label class="text-[9px] font-bold text-gray-500 uppercase">Tahun</label>
+                            <select id="filterMonPPKTahun" onchange="renderMonPPK()" class="w-full border rounded p-1.5 text-xs">
+                                <option value="Semua">Semua</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-xs font-bold text-gray-600 mb-2 uppercase">Kinerja PPK (Beban Kerja & Kecepatan)</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-indigo-50 text-indigo-900">
+                                    <th>Nama PPK</th>
+                                    <th class="text-center">Jml Paket</th>
+                                    <th class="text-right">Total Nilai RUP</th>
+                                    <th class="text-right">Total Nilai PO</th>
+                                    <th class="text-right">Total Nilai Efisiensi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monPPKTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Monitoring PP/Pokja -->
+            <div id="mon-sub-pokja" class="mon-sub-page">
+                <div class="glass-card p-4 mb-4">
+                     <div class="flex gap-3 mb-4 bg-gray-50 p-3 rounded border items-end">
+                        <div class="flex-1">
+                            <label class="text-[9px] font-bold text-gray-500 uppercase">Cari Nama PP/Pokja</label>
+                            <input type="text" id="filterMonPokja" oninput="renderMonPokja()" class="w-full border rounded p-1.5 text-xs" placeholder="Ketik nama PP/Pokja...">
+                        </div>
+                         <div class="w-1/4">
+                            <label class="text-[9px] font-bold text-gray-500 uppercase">Tahun</label>
+                            <select id="filterMonPokjaTahun" onchange="renderMonPokja()" class="w-full border rounded p-1.5 text-xs">
+                                <option value="Semua">Semua</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-xs font-bold text-gray-600 mb-2 uppercase">Kinerja PP/Pokja</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-emerald-50 text-emerald-900">
+                                    <th>Nama PP/Pokja</th>
+                                    <th class="text-center">Jumlah Paket</th>
+                                    <th class="text-right">Total Nilai RUP</th>
+                                    <th class="text-right">Total Nilai PO</th>
+                                    <th class="text-right">Total Nilai Efisiensi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monPokjaTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Monitoring Vendor -->
+            <div id="mon-sub-vendor" class="mon-sub-page">
+                <div class="glass-card p-4 mb-4">
+                    <div class="flex gap-2 mb-4 bg-gray-50 p-3 rounded border">
+                        <div class="flex-1"><label class="text-[9px] font-bold text-gray-500 uppercase">Cari Vendor</label><input type="text" id="filterMonVendor" oninput="renderMonVendor()" class="w-full border rounded p-1.5 text-xs" placeholder="Nama PT/CV..."></div>
+                        <div class="w-1/4"><label class="text-[9px] font-bold text-gray-500 uppercase">Min Rating</label><select id="filterMonRating" onchange="renderMonVendor()" class="w-full border rounded p-1.5 text-xs"><option value="0">Semua</option><option value="4">Bintang 4+</option><option value="3">Bintang 3+</option></select></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="monVendorGrid"></div>
+                </div>
+            </div>
+
+            <!-- 5. Manajemen Vendor -->
+            <div id="mon-sub-mgmt" class="mon-sub-page">
+                <div class="glass-card p-4 mb-4">
+                    <div class="flex justify-between items-end mb-4">
+                        <div class="flex-1 mr-4">
+                            <label class="text-[9px] font-bold text-gray-500 uppercase">Filter Status</label>
+                            <select id="filterMgmtStatus" onchange="renderManVendor()" class="w-full border rounded p-1.5 text-xs"><option value="All">Semua Status</option><option value="Active">Active</option><option value="Blacklist">Blacklist</option><option value="Suspended">Suspended</option></select>
+                        </div>
+                        <button class="bg-blue-600 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-blue-700 shadow"><i class="fas fa-plus mr-2"></i>Tambah Vendor Baru</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead><tr><th>Nama Vendor</th><th>NPWP</th><th>Alamat</th><th class="text-center">Rating</th><th class="text-center">Status</th><th class="text-center">Aksi</th></tr></thead>
+                            <tbody id="mgmtVendorTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -283,7 +434,8 @@
                         <tbody id="modalTableBody"></tbody>
                     </table>
                 </div>
-                <div class="flex justify-between items-center border-t pt-4 mt-2">
+                <!-- Added ID 'modalFooter' for toggling visibility -->
+                <div id="modalFooter" class="flex justify-between items-center border-t pt-4 mt-2">
                     <p class="text-xs font-bold text-gray-500 uppercase">Total Nilai Paket:</p>
                     <h3 id="modalTotal" class="text-lg font-bold text-blue-600">Rp 0</h3>
                 </div>
@@ -305,10 +457,40 @@
         <div class="glass-card w-11/12 max-w-[95%] overflow-hidden shadow-2xl"><div class="p-4 border-b flex justify-between items-center bg-indigo-700 text-white"><h3 class="font-bold uppercase text-xs" id="prUnitModalTitle">Rincian Paket PR</h3><button onclick="closeModal('prUnitDetailModal')"><i class="fas fa-times"></i></button></div><div class="p-4 bg-slate-50"><div class="overflow-x-auto max-h-[500px]"><table class="w-full text-[9px] text-left border bg-white"><thead><tr class="bg-gray-100"><th class="border p-2">Nama Paket</th><th class="border p-2 text-right">Nilai Paket</th><th class="border p-2">Metode</th><th class="border p-2">Jenis</th><th class="border p-2">Lokasi</th><th class="border p-2 text-center">Tgl PR</th><th class="border p-2 text-center">Status</th></tr></thead><tbody id="prUnitModalTableBody"></tbody></table></div><div class="flex justify-end mt-4"><button onclick="closeModal('prUnitDetailModal')" class="bg-gray-200 px-6 py-2 rounded text-xs font-bold uppercase hover:bg-gray-300">TUTUP</button></div></div></div>
     </div>
 
+    <!-- Modal PPK Detail (Shared for Pokja) -->
+    <div id="ppkDetailModal" class="modal">
+        <div class="glass-card w-11/12 max-w-[95%] overflow-hidden shadow-2xl">
+            <div class="p-4 border-b flex justify-between items-center bg-indigo-600 text-white">
+                <h3 class="font-bold uppercase text-xs" id="ppkModalTitle">Daftar Paket</h3>
+                <button onclick="closeModal('ppkDetailModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-4 bg-slate-50">
+                <div class="overflow-x-auto max-h-[500px]">
+                    <table class="w-full text-[9px] text-left border bg-white">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border p-2">Nama Paket Pekerjaan</th>
+                                <th class="border p-2 text-right">Nilai Requisitions</th>
+                                <th class="border p-2 text-right">Nilai PO</th>
+                                <th class="border p-2 text-right">Nilai Efisiensi</th>
+                                <th class="border p-2 text-center">Status Paket Pekerjaan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ppkModalTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="flex justify-end mt-4">
+                    <button onclick="closeModal('ppkDetailModal')" class="bg-gray-200 px-6 py-2 rounded text-xs font-bold uppercase hover:bg-gray-300">TUTUP</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const TODAY = new Date("2024-09-15");
         let charts = {};
         let timelineChart = null;
+        let selectedPaketId = null; // Track selected packet
 
         if (typeof ChartDataLabels !== 'undefined') { Chart.register(ChartDataLabels); }
 
@@ -319,12 +501,15 @@
 
         // --- DATASET ---
         const unpadUnits = ["Direktorat Perencanaan, Sistem Informasi, dan Transformasi Digital", "Direktorat Keuangan dan Tresuri", "Fakultas Hukum", "Fakultas Keperawatan", "Fakultas Psikologi", "Fakultas Kedokteran", "Program Pascasarjana"];
+        
+        // Updated Master Data with PPK, Pokja, Vendor Info
         const masterData = [
-            { id: 1, tahun: "2024", unit: unpadUnits[0], paket: "Server Data Center 2024", nomorPr: "PR/2024/001/DSID", nomorPo: "PO/2024/V-001", nomorRec: "BAST/2024/001", nomorPay: "PAY/2024/SP2D-001", nilaiRup: 1500000000, nilaiPo: 1200000000, jenis: "Barang", metode: "e-Purchasing", lokasi: "Bandung", tahap: "PAYMENT", statusPr: "Approve", statusPo: "Approve", statusPay: "Approve", vendor: "PT. Jaringan Global", timeline: { RUP: "2024-01-10", PR: "2024-01-25", Negotiations: "2024-02-05", PO: "2024-02-15", REC: "2024-03-01", Pay: "2024-03-15" }, items: [{n:"Server Utama", v:2, vRec:2, s:"Unit", h:600000000}] },
-            { id: 2, tahun: "2024", unit: unpadUnits[1], paket: "Lisensi Database Oracle", nomorPr: "PR/2024/002/KEU", nomorPo: "PO/2024/V-002", nomorRec: "BAST/2024/002", nomorPay: "PAY/2024/SP2D-002", nilaiRup: 500000000, nilaiPo: 480000000, jenis: "Jasa Konsultansi", metode: "Pengadaan Langsung", lokasi: "Bandung", tahap: "PAYMENT", statusPr: "Approve", statusPo: "Approve", statusPay: "Approve", vendor: "PT. Solusi IT", timeline: { RUP: "2024-01-05", PR: "2024-01-15", Negotiations: "2024-01-25", PO: "2024-02-01", REC: "2024-02-15", Pay: "2024-02-28" }, items: [{n:"Lisensi Database", v:1, vRec:1, s:"Pkg", h:480000000}] },
-            { id: 3, tahun: "2024", unit: unpadUnits[2], paket: "Renovasi Ruang Sidang FH", nomorPr: "PR/2024/005/FH", nomorPo: "PO/2024/V-003", nomorRec: null, nomorPay: null, nilaiRup: 800000000, nilaiPo: 780000000, jenis: "Pekerjaan Konstruksi", metode: "Tender", lokasi: "Bandung", tahap: "PO", statusPr: "Approve", statusPo: "Submit", statusPay: "Draft", vendor: "CV. Bangun Jaya", timeline: { RUP: "2024-02-01", PR: "2024-03-10", Negotiations: "2024-04-05", PO: "2024-05-15", REC: null, Pay: null }, items: [{n:"Pekerjaan Sipil", v:1, vRec:0, s:"Lot", h:780000000}] },
-            { id: 16, tahun: "2024", unit: unpadUnits[0], paket: "Pemeliharaan Lift Rektorat", nomorPr: "PR/2024/008/DSID", nomorPo: "PO/2024/V-004", nomorRec: "BAST/2024/015", nomorPay: null, nilaiRup: 400000000, nilaiPo: 380000000, jenis: "Jasa Lainnya", metode: "Pengadaan Langsung", lokasi: "Bandung", tahap: "RECEIVING", statusPr: "Approve", statusPo: "Approve", statusPay: "Draft", vendor: "PT. Fiber Link", timeline: { RUP: "2024-03-01", PR: "2024-04-01", Negotiations: "2024-04-15", PO: "2024-05-01", REC: "2024-09-10", Pay: null }, items: [{n:"Service Bulanan", v:12, vRec:8, s:"Bulan", h:31666666}] },
-            { id: 4, tahun: "2024", unit: unpadUnits[3], paket: "Pengadaan Mikroskop Lab", nomorPr: "PR/2024/010/FKP", nomorPo: null, nomorRec: null, nomorPay: null, nilaiRup: 500000000, nilaiPo: 0, jenis: "Barang", metode: "e-Purchasing", lokasi: "Jatinangor", tahap: "PR", statusPr: "Submit", statusPo: "Draft", statusPay: "Draft", vendor: "-", timeline: { RUP: "2024-01-10", PR: "2024-02-15", Negotiations: "2024-02-05", PO: null, REC: null, Pay: null }, items: [{n:"Mikroskop Binokuler", v:10, vRec:0, s:"Unit", h:50000000}] }
+            { id: 1, tahun: "2024", unit: unpadUnits[0], paket: "Server Data Center 2024", ppk: "Dr. Budi Santoso", pokja: "Pokja IT", vendorRating: 4.5, vendorStatus: "Active", nomorPr: "PR/2024/001/DSID", nomorPo: "PO/2024/V-001", nomorRec: "BAST/2024/001", nomorPay: "PAY/2024/SP2D-001", nilaiRup: 1500000000, nilaiPo: 1200000000, jenis: "Barang", metode: "e-Purchasing", lokasi: "Bandung", tahap: "PAYMENT", statusPr: "Approve", statusPo: "Approve", statusPay: "Approve", vendor: "PT. Jaringan Global", timeline: { RUP: "2024-01-10", PR: "2024-01-25", Negotiations: "2024-02-05", PO: "2024-02-15", REC: "2024-03-01", Pay: "2024-03-15" }, items: [{n:"Server Utama", v:2, vRec:2, s:"Unit", h:600000000}] },
+            { id: 2, tahun: "2024", unit: unpadUnits[1], paket: "Lisensi Database Oracle", ppk: "Siti Aminah, M.Ak", pokja: "Pejabat Pengadaan", vendorRating: 4.8, vendorStatus: "Active", nomorPr: "PR/2024/002/KEU", nomorPo: "PO/2024/V-002", nomorRec: "BAST/2024/002", nomorPay: "PAY/2024/SP2D-002", nilaiRup: 500000000, nilaiPo: 480000000, jenis: "Jasa Konsultansi", metode: "Pengadaan Langsung", lokasi: "Bandung", tahap: "PAYMENT", statusPr: "Approve", statusPo: "Approve", statusPay: "Approve", vendor: "PT. Solusi IT", timeline: { RUP: "2024-01-05", PR: "2024-01-15", Negotiations: "2024-01-25", PO: "2024-02-01", REC: "2024-02-15", Pay: "2024-02-28" }, items: [{n:"Lisensi Database", v:1, vRec:1, s:"Pkg", h:480000000}] },
+            { id: 3, tahun: "2024", unit: unpadUnits[2], paket: "Renovasi Ruang Sidang FH", ppk: "Ir. Dedi Mulyadi", pokja: "Pokja Konstruksi", vendorRating: 3.5, vendorStatus: "Active", nomorPr: "PR/2024/005/FH", nomorPo: "PO/2024/V-003", nomorRec: null, nomorPay: null, nilaiRup: 800000000, nilaiPo: 780000000, jenis: "Pekerjaan Konstruksi", metode: "Tender", lokasi: "Bandung", tahap: "PO", statusPr: "Approve", statusPo: "Submit", statusPay: "Draft", vendor: "CV. Bangun Jaya", timeline: { RUP: "2024-02-01", PR: "2024-03-10", Negotiations: "2024-04-05", PO: "2024-05-15", REC: null, Pay: null }, items: [{n:"Pekerjaan Sipil", v:1, vRec:0, s:"Lot", h:780000000}] },
+            { id: 16, tahun: "2024", unit: unpadUnits[0], paket: "Pemeliharaan Lift Rektorat", ppk: "Dr. Budi Santoso", pokja: "Pejabat Pengadaan", vendorRating: 4.0, vendorStatus: "Active", nomorPr: "PR/2024/008/DSID", nomorPo: "PO/2024/V-004", nomorRec: "BAST/2024/015", nomorPay: null, nilaiRup: 400000000, nilaiPo: 380000000, jenis: "Jasa Lainnya", metode: "Pengadaan Langsung", lokasi: "Bandung", tahap: "RECEIVING", statusPr: "Approve", statusPo: "Approve", statusPay: "Draft", vendor: "PT. Fiber Link", timeline: { RUP: "2024-03-01", PR: "2024-04-01", Negotiations: "2024-04-15", PO: "2024-05-01", REC: "2024-09-10", Pay: null }, items: [{n:"Service Bulanan", v:12, vRec:8, s:"Bulan", h:31666666}] },
+            { id: 4, tahun: "2024", unit: unpadUnits[3], paket: "Pengadaan Mikroskop Lab", ppk: "Prof. Rina", pokja: "Pokja Alkes", vendorRating: 0, vendorStatus: "N/A", nomorPr: "PR/2024/010/FKP", nomorPo: null, nomorRec: null, nomorPay: null, nilaiRup: 500000000, nilaiPo: 0, jenis: "Barang", metode: "e-Purchasing", lokasi: "Jatinangor", tahap: "PR", statusPr: "Submit", statusPo: "Draft", statusPay: "Draft", vendor: "-", timeline: { RUP: "2024-01-10", PR: "2024-02-15", Negotiations: "2024-02-05", PO: null, REC: null, Pay: null }, items: [{n:"Mikroskop Binokuler", v:10, vRec:0, s:"Unit", h:50000000}] },
+            { id: 17, tahun: "2024", unit: unpadUnits[2], paket: "Pengadaan ATK FH 2024", ppk: "Ir. Dedi Mulyadi", pokja: "Pejabat Pengadaan", vendorRating: 2.0, vendorStatus: "Suspended", nomorPr: "PR/2024/020/FH", nomorPo: "PO/2024/V-099", nomorRec: null, nomorPay: null, nilaiRup: 50000000, nilaiPo: 45000000, jenis: "Barang", metode: "Pengadaan Langsung", lokasi: "Bandung", tahap: "PO", statusPr: "Approve", statusPo: "Approve", statusPay: "Draft", vendor: "CV. ATK Murah", timeline: { RUP: "2024-01-01", PR: "2024-01-10", Negotiations: "2024-01-12", PO: "2024-01-15", REC: null, Pay: null }, items: [{n:"Kertas A4", v:100, vRec:0, s:"Rim", h:450000}] }
         ];
 
         // --- NAVIGATION ---
@@ -333,9 +518,348 @@
             const t = document.getElementById('page-' + p); if(t) t.classList.add('active'); 
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); 
             if(el) el.classList.add('active'); 
-            updateDashboard(); 
+            
+            // Show/Hide Global Filter
+            const gFilter = document.getElementById('globalFilterHeader');
+            if(p === 'monitoring') {
+                if(gFilter) gFilter.style.display = 'none';
+                renderMonPaket(); renderMonPPK(); renderMonPokja(); renderMonVendor(); renderManVendor();
+            } else {
+                if(gFilter) gFilter.style.display = 'flex';
+                updateDashboard(); 
+            }
         }
 
+        // --- MONITORING SUB-NAVIGATION ---
+        function showMonSubPage(sub, el) {
+            document.querySelectorAll('.mon-sub-page').forEach(x => x.classList.remove('active'));
+            document.getElementById('mon-sub-' + sub).classList.add('active');
+            document.querySelectorAll('.mon-tab').forEach(x => x.classList.remove('active'));
+            if(el) el.classList.add('active');
+        }
+
+        // --- RENDER FUNCTIONS FOR MONITORING TABS ---
+        
+        // 1. Paket Pekerjaan (UPDATED LOGIC)
+        function renderMonPaket() {
+            const fNama = document.getElementById('filterMonPaketNama').value.toLowerCase();
+            const fPR = document.getElementById('filterMonPaketPR').value.toLowerCase();
+            const fPO = document.getElementById('filterMonPaketPO').value.toLowerCase();
+            
+            // Cek apakah ada filter yang aktif
+            const isFilterActive = fNama !== "" || fPR !== "" || fPO !== "";
+
+            const filtered = masterData.filter(d => {
+                const matchNama = d.paket.toLowerCase().includes(fNama);
+                const matchPR = (d.nomorPr || "").toLowerCase().includes(fPR);
+                const matchPO = (d.nomorPo || "").toLowerCase().includes(fPO);
+                return matchNama && matchPR && matchPO;
+            });
+
+            const tab = document.getElementById('monPaketTable');
+            
+            if (!isFilterActive) {
+                selectedPaketId = null;
+            } else {
+                if (filtered.length > 0) {
+                    if(!selectedPaketId || !filtered.find(d => d.id == selectedPaketId)) {
+                        selectedPaketId = filtered[0].id;
+                    }
+                } else {
+                    selectedPaketId = null;
+                }
+            }
+
+            tab.innerHTML = filtered.length > 0 ? filtered.map(d => {
+                const lastKey = Object.keys(d.timeline).filter(k => d.timeline[k] !== null).pop();
+                const days = Math.ceil(Math.abs(TODAY - new Date(d.timeline[lastKey] || TODAY)) / (1000*60*60*24));
+                const eff = d.nilaiPo > 0 ? (((d.nilaiRup - d.nilaiPo) / d.nilaiRup) * 100).toFixed(1) : "-";
+                let slaBg = days > 14 ? 'bg-red-100 text-red-600' : (days > 7 ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600');
+                
+                const activeClass = (d.id === selectedPaketId) ? 'selected' : '';
+
+                // UPDATED: Button calls openTimelineDetail instead of openDetail
+                return `<tr class="mon-row ${activeClass}" data-id="${d.id}" onclick="selectPaket(${d.id})">
+                    <td>
+                        <div class="font-bold text-slate-700 text-xs">${d.paket}</div>
+                        <div class="text-[9px] text-gray-400">${d.unit}</div>
+                    </td>
+                    <td class="text-center">
+                        <div class="text-[9px] font-mono bg-indigo-50 text-indigo-600 px-1 rounded mb-1">${d.nomorPr || '-'}</div>
+                        <div class="text-[9px] font-mono bg-emerald-50 text-emerald-600 px-1 rounded">${d.nomorPo || '-'}</div>
+                    </td>
+                    <td>${fIDR(d.nilaiPo || d.nilaiRup)}</td>
+                    <td class="text-center font-bold text-green-600">${eff !== "-" ? eff + "%" : "-"}</td>
+                    <td class="text-[10px] font-bold text-blue-600 uppercase italic">${d.tahap}</td>
+                    <td class="text-center font-bold">${days} Hari</td>
+                    <td class="text-center"><span class="${slaBg} px-2 py-0.5 rounded text-[9px] font-bold uppercase">${days>14?'Over':(days>7?'Warn':'Aman')}</span></td>
+                    <td onclick="event.stopPropagation()"><button onclick="openTimelineDetail(${d.id})" class="text-blue-600 font-bold text-xs uppercase hover:underline">Detail</button></td>
+                </tr>`;
+            }).join("") : `<tr><td colspan="8" class="p-4 text-center text-gray-400 italic">Tidak ada paket yang sesuai filter.</td></tr>`;
+            
+            updatePaketTimeline(selectedPaketId);
+        }
+
+        // Triggered when row is clicked (Manual Selection)
+        function selectPaket(id) {
+            selectedPaketId = id;
+            document.querySelectorAll('.mon-row').forEach(row => row.classList.remove('selected'));
+            const activeRow = document.querySelector(`.mon-row[data-id="${id}"]`);
+            if(activeRow) activeRow.classList.add('selected');
+            
+            updatePaketTimeline(id);
+        }
+
+        // 2. Monitoring PPK (UPDATED LOGIC)
+        function renderMonPPK() {
+            const filterName = document.getElementById('filterMonPPK').value.toLowerCase();
+            const filterYear = document.getElementById('filterMonPPKTahun').value;
+
+            // Group by PPK
+            const ppkData = {};
+            
+            masterData.forEach(d => {
+                if(!d.ppk) return;
+                // Filter Tahun
+                if (filterYear !== "Semua" && d.tahun !== filterYear) return;
+
+                if(!ppkData[d.ppk]) {
+                    ppkData[d.ppk] = { 
+                        name: d.ppk, 
+                        count: 0, 
+                        totalRup: 0, // Nilai Requisition (Pagu)
+                        totalPo: 0,  // Nilai PO (Kontrak)
+                        daysTotal: 0 
+                    };
+                }
+                
+                ppkData[d.ppk].count++;
+                ppkData[d.ppk].totalRup += d.nilaiRup;
+                ppkData[d.ppk].totalPo += d.nilaiPo;
+                
+                // Mock calculation for avg days (Logic placeholder)
+                ppkData[d.ppk].daysTotal += Math.floor(Math.random() * 20) + 15; 
+            });
+
+            const tbody = document.getElementById('monPPKTable');
+            tbody.innerHTML = Object.values(ppkData)
+                .filter(p => p.name.toLowerCase().includes(filterName))
+                .map(p => {
+                    // Hitung Efisiensi: (Total RUP - Total PO)
+                    // Jika PO 0, anggap belum ada efisiensi real (0 saving)
+                    const savingValue = p.totalPo > 0 ? (p.totalRup - p.totalPo) : 0;
+                    let efficiencyPct = 0;
+                    
+                    if (p.totalRup > 0 && p.totalPo > 0) {
+                         efficiencyPct = (savingValue / p.totalRup) * 100;
+                    }
+                    
+                    // Formatting tampilan
+                    const effClass = efficiencyPct > 0 ? "text-green-600" : (efficiencyPct < 0 ? "text-red-500" : "text-gray-400");
+                    const effDisplay = efficiencyPct !== 0 ? efficiencyPct.toFixed(1) + "%" : "0%";
+
+                    return `<tr class="hover:bg-gray-50">
+                        <td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="openPPKDetail('${p.name}')">${p.name}</td>
+                        <td class="text-center font-bold">${p.count}</td>
+                        <td class="text-right font-mono">${fIDR(p.totalRup)}</td>
+                        <td class="text-right font-mono text-emerald-600">${fIDR(p.totalPo)}</td>
+                        <td class="text-right font-bold ${effClass}">
+                            <div>${fIDR(savingValue)}</div>
+                            <div class="text-[9px]">${effDisplay}</div>
+                        </td>
+                    </tr>`;
+                }).join("");
+        }
+
+        function openPPKDetail(ppkName) {
+            const elTitle = document.getElementById('ppkModalTitle'); if(elTitle) elTitle.innerText = 'Daftar Paket PPK: ' + ppkName;
+            const filtered = masterData.filter(x => x.ppk === ppkName);
+            const tbody = document.getElementById('ppkModalTableBody');
+            
+            if(tbody) {
+                tbody.innerHTML = filtered.length > 0 ? filtered.map(p => {
+                    const saving = p.nilaiPo > 0 ? (p.nilaiRup - p.nilaiPo) : 0;
+                    const effPct = p.nilaiPo > 0 ? ((saving / p.nilaiRup) * 100).toFixed(1) + "%" : "0%";
+                    const effClass = saving > 0 ? "text-green-600" : (saving < 0 ? "text-red-600" : "text-gray-400");
+
+                    return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-2 border font-bold text-slate-700 text-[10px]">${p.paket}</td>
+                        <td class="p-2 border text-right text-[10px] font-mono">${fIDR(p.nilaiRup)}</td>
+                        <td class="p-2 border text-right text-[10px] font-mono text-emerald-600">${fIDR(p.nilaiPo)}</td>
+                        <td class="p-2 border text-right text-[10px] font-bold ${effClass}">
+                             <div>${fIDR(saving)}</div>
+                             <div class="text-[8px]">${effPct}</div>
+                        </td>
+                        <td class="p-2 border text-center text-[10px]">
+                            <span class="px-2 py-0.5 rounded text-[8px] font-bold uppercase bg-blue-100 text-blue-700">${p.tahap}</span>
+                        </td>
+                    </tr>`;
+                }).join("") : `<tr><td colspan="5" class="p-4 text-center text-gray-400 italic text-[10px]">Belum ada data paket.</td></tr>`;
+            }
+            document.getElementById('ppkDetailModal').classList.add('active');
+        }
+
+        // 3. Monitoring Pokja
+        function renderMonPokja() {
+            const filterName = document.getElementById('filterMonPokja').value.toLowerCase();
+            const filterYear = document.getElementById('filterMonPokjaTahun').value;
+        
+            const pokjaData = {};
+            
+            masterData.forEach(d => {
+                if(!d.pokja) return;
+                if (filterYear !== "Semua" && d.tahun !== filterYear) return;
+        
+                if(!pokjaData[d.pokja]) {
+                    pokjaData[d.pokja] = { 
+                        name: d.pokja, 
+                        count: 0, 
+                        totalRup: 0, 
+                        totalPo: 0
+                    };
+                }
+                
+                pokjaData[d.pokja].count++;
+                pokjaData[d.pokja].totalRup += d.nilaiRup;
+                pokjaData[d.pokja].totalPo += d.nilaiPo;
+            });
+        
+            const tbody = document.getElementById('monPokjaTable');
+            tbody.innerHTML = Object.values(pokjaData)
+                .filter(p => p.name.toLowerCase().includes(filterName))
+                .map(p => {
+                    const savingValue = p.totalPo > 0 ? (p.totalRup - p.totalPo) : 0;
+                    let efficiencyPct = 0;
+                    if (p.totalRup > 0 && p.totalPo > 0) {
+                            efficiencyPct = (savingValue / p.totalRup) * 100;
+                    }
+                    
+                    const effClass = efficiencyPct > 0 ? "text-green-600" : (efficiencyPct < 0 ? "text-red-500" : "text-gray-400");
+                    const effDisplay = efficiencyPct !== 0 ? efficiencyPct.toFixed(1) + "%" : "0%";
+        
+                    return `<tr class="hover:bg-gray-50">
+                        <td class="font-bold text-emerald-600 cursor-pointer hover:underline" onclick="openPokjaDetail('${p.name}')">${p.name}</td>
+                        <td class="text-center font-bold">${p.count}</td>
+                        <td class="text-right font-mono">${fIDR(p.totalRup)}</td>
+                        <td class="text-right font-mono text-emerald-600">${fIDR(p.totalPo)}</td>
+                        <td class="text-right font-bold ${effClass}">
+                            <div>${fIDR(savingValue)}</div>
+                            <div class="text-[9px]">${effDisplay}</div>
+                        </td>
+                    </tr>`;
+                }).join("");
+        }
+
+        function openPokjaDetail(pokjaName) {
+            const elTitle = document.getElementById('ppkModalTitle'); 
+            if(elTitle) elTitle.innerText = 'Daftar Paket PP/Pokja: ' + pokjaName;
+            
+            const filtered = masterData.filter(x => x.pokja === pokjaName);
+            const tbody = document.getElementById('ppkModalTableBody');
+            
+            if(tbody) {
+                tbody.innerHTML = filtered.length > 0 ? filtered.map(p => {
+                    const saving = p.nilaiPo > 0 ? (p.nilaiRup - p.nilaiPo) : 0;
+                    const effPct = p.nilaiPo > 0 ? ((saving / p.nilaiRup) * 100).toFixed(1) + "%" : "0%";
+                    const effClass = saving > 0 ? "text-green-600" : (saving < 0 ? "text-red-600" : "text-gray-400");
+
+                    return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-2 border font-bold text-slate-700 text-[10px]">${p.paket}</td>
+                        <td class="p-2 border text-right text-[10px] font-mono">${fIDR(p.nilaiRup)}</td>
+                        <td class="p-2 border text-right text-[10px] font-mono text-emerald-600">${fIDR(p.nilaiPo)}</td>
+                        <td class="p-2 border text-right text-[10px] font-bold ${effClass}">
+                                <div>${fIDR(saving)}</div>
+                                <div class="text-[8px]">${effPct}</div>
+                        </td>
+                        <td class="p-2 border text-center text-[10px]">
+                            <span class="px-2 py-0.5 rounded text-[8px] font-bold uppercase bg-blue-100 text-blue-700">${p.tahap}</span>
+                        </td>
+                    </tr>`;
+                }).join("") : `<tr><td colspan="5" class="p-4 text-center text-gray-400 italic text-[10px]">Belum ada data paket.</td></tr>`;
+            }
+            document.getElementById('ppkDetailModal').classList.add('active');
+        }
+
+        // 4. Monitoring Vendor
+        function renderMonVendor() {
+            const filter = document.getElementById('filterMonVendor').value.toLowerCase();
+            const minRate = parseFloat(document.getElementById('filterMonRating').value);
+            
+            // Unique Vendors
+            const vendors = {};
+            masterData.forEach(d => {
+                if(!d.vendor || d.vendor === '-' || d.vendor === 'N/A') return;
+                if(!vendors[d.vendor]) vendors[d.vendor] = { name: d.vendor, pkts: [], rating: d.vendorRating };
+                vendors[d.vendor].pkts.push(d.paket);
+            });
+
+            const grid = document.getElementById('monVendorGrid');
+            grid.innerHTML = Object.values(vendors)
+                .filter(v => v.name.toLowerCase().includes(filter) && v.rating >= minRate)
+                .map(v => {
+                    let stars = "";
+                    for(let i=1; i<=5; i++) {
+                        if(i <= Math.floor(v.rating)) stars += '<i class="fas fa-star text-yellow-400"></i>';
+                        else if(i === Math.ceil(v.rating) && !Number.isInteger(v.rating)) stars += '<i class="fas fa-star-half-alt text-yellow-400"></i>';
+                        else stars += '<i class="far fa-star text-gray-300"></i>';
+                    }
+                    return `
+                    <div class="glass-card p-4 flex flex-col justify-between h-full border hover:shadow-md transition">
+                        <div>
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-bold text-sm text-slate-700">${v.name}</h4>
+                                <div class="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded font-bold">${v.pkts.length} Pkt</div>
+                            </div>
+                            <div class="mb-3">${stars} <span class="text-xs text-gray-500 font-bold ml-1">${v.rating}</span></div>
+                            <div class="text-[10px] text-gray-500 mb-1 font-bold uppercase">Riwayat Paket:</div>
+                            <ul class="text-[10px] text-gray-600 list-disc ml-4 mb-3">
+                                ${v.pkts.slice(0,3).map(p => `<li>${p}</li>`).join('')}
+                                ${v.pkts.length > 3 ? `<li>+${v.pkts.length-3} lainnya...</li>` : ''}
+                            </ul>
+                        </div>
+                        <button class="w-full mt-2 bg-white border border-gray-300 text-gray-600 text-[10px] font-bold py-1.5 rounded hover:bg-gray-50 uppercase">Lihat Profil</button>
+                    </div>`;
+                }).join("");
+        }
+
+        // 5. Manajemen Vendor
+        function renderManVendor() {
+            const filterStat = document.getElementById('filterMgmtStatus').value;
+            // Mock Vendor Mgmt List (derived + extra)
+            const vendorsList = [
+                {name: "PT. Jaringan Global", npwp: "01.234.567.8-123.000", addr: "Jl. Dago No. 100", rate: 4.5, status: "Active"},
+                {name: "PT. Solusi IT", npwp: "02.555.666.7-444.000", addr: "Jl. Setiabudi No. 55", rate: 4.8, status: "Active"},
+                {name: "CV. Bangun Jaya", npwp: "88.999.111.2-333.000", addr: "Jl. Soekarno Hatta No. 12", rate: 3.5, status: "Active"},
+                {name: "PT. Fiber Link", npwp: "77.123.456.9-000.000", addr: "Jl. Dipatiukur No. 8", rate: 4.0, status: "Active"},
+                {name: "CV. ATK Murah", npwp: "99.000.111.5-666.000", addr: "Jl. Cibiru No. 1", rate: 2.0, status: "Suspended"},
+                {name: "PT. Blacklist Abadi", npwp: "66.666.666.6-666.000", addr: "Unknown", rate: 1.0, status: "Blacklist"}
+            ];
+
+            const tbody = document.getElementById('mgmtVendorTable');
+            tbody.innerHTML = vendorsList
+                .filter(v => filterStat === "All" || v.status === filterStat)
+                .map(v => {
+                    let badgeClass = "bg-green-100 text-green-700";
+                    if(v.status === 'Blacklist') badgeClass = "bg-red-100 text-red-700";
+                    if(v.status === 'Suspended') badgeClass = "bg-amber-100 text-amber-700";
+                    
+                    return `<tr class="hover:bg-gray-50">
+                        <td class="font-bold text-slate-700">${v.name}</td>
+                        <td class="font-mono text-gray-500">${v.npwp}</td>
+                        <td class="truncate max-w-[150px]">${v.addr}</td>
+                        <td class="text-center font-bold text-amber-500"><i class="fas fa-star mr-1"></i>${v.rate}</td>
+                        <td class="text-center"><span class="status-badge ${badgeClass}">${v.status}</span></td>
+                        <td class="text-center">
+                            <button class="text-blue-600 hover:text-blue-800 mx-1"><i class="fas fa-edit"></i></button>
+                            <button class="text-red-600 hover:text-red-800 mx-1"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+                }).join("");
+        }
+
+        // --- DASHBOARD LOGIC (EXISTING) ---
         function updateDashboard() {
             const year = document.getElementById('filterTahun').value;
             const unit = document.getElementById('filterUnit').value;
@@ -374,18 +898,17 @@
             populatePrPackageTable(filtered);
             populatePoPackageTable(filtered);
             populateRecPackageTable(filtered);
-            populatePayPackageTable(filtered); // Added
+            populatePayPackageTable(filtered);
             
             updateHomeCharts(filtered);
             updateRupPageCharts(filtered);
             updatePrPageCharts(filtered);
             updatePoPageCharts(filtered);
             updateRecPageCharts(filtered);
-            updatePayPageCharts(filtered); // Added
-            updateMonitoringViews(filtered);
+            updatePayPageCharts(filtered);
         }
 
-        // --- TABLES ---
+        // --- TABLES (EXISTING) ---
         function populateRupSummaryTable(data) {
             const tbody = document.getElementById('rupSummaryTableBody'); if(!tbody) return;
             const curYear = document.getElementById('filterTahun').value === "Semua" ? "2024" : document.getElementById('filterTahun').value;
@@ -395,14 +918,7 @@
             }).join("");
         }
 
-        function populatePrSummaryTable(data) {
-            const tbody = document.getElementById('prSummaryTableBody'); if(!tbody) return;
-            const curYear = document.getElementById('filterTahun').value === "Semua" ? "2024" : document.getElementById('filterTahun').value;
-            tbody.innerHTML = unpadUnits.map(u => {
-                const ud = data.filter(x => x.unit === u && ['PR','PO','RECEIVING','PAYMENT'].includes(x.tahap));
-                return `<tr class="hover:bg-gray-50"><td class="text-center text-[10px] font-semibold">${curYear}</td><td class="font-bold text-indigo-600 cursor-pointer hover:underline text-[10px]" onclick="openUnitDetail('${u}', 'unit')">${u}</td><td class="text-center font-bold text-[10px]">${ud.length} Paket</td><td class="text-right font-bold text-slate-700 text-[10px]">${fIDR(ud.reduce((a,c)=>a+c.nilaiRup,0))}</td></tr>`;
-            }).join("");
-        }
+        function populatePrSummaryTable(data) { /* Not used in UI but kept for ref */ }
 
         function populatePrPackageTable(data) {
             const tbody = document.getElementById('prPackageTableBody'); if(!tbody) return;
@@ -459,9 +975,100 @@
         }
 
         // --- DRILL-DOWN HELPERS ---
+        
+        // NEW FUNCTION: Menampilkan Rincian Waktu (Durasi) P2P
+        function openTimelineDetail(id) {
+            const d = masterData.find(x => x.id === id); if(!d) return;
+            
+            document.getElementById('modalTitle').innerText = 'Analisis Waktu Proses P2P: ' + d.paket;
+            
+            // Sembunyikan Footer Total Harga karena tidak relevan
+            const footer = document.getElementById('modalFooter');
+            if(footer) footer.style.display = 'none';
+
+            const thead = document.getElementById('modalThead');
+            thead.innerHTML = `
+                <tr class="bg-gray-100">
+                    <th class="p-2 border">Tahapan Proses</th>
+                    <th class="p-2 border text-center">Tanggal Realisasi</th>
+                    <th class="p-2 border text-center">Durasi Proses</th>
+                    <th class="p-2 border text-center">Status</th>
+                </tr>`;
+            
+            const tbody = document.getElementById('modalTableBody');
+            
+            // Definisi urutan tahapan
+            const stages = [
+                { key: 'RUP', label: 'Perencanaan (RUP)' },
+                { key: 'PR', label: 'Permintaan (Requisition)' },
+                { key: 'Negotiations', label: 'Proses Pengadaan / Negosiasi' },
+                { key: 'PO', label: 'Penerbitan Kontrak (PO)' },
+                { key: 'REC', label: 'Penerimaan Barang (Receiving)' },
+                { key: 'Pay', label: 'Pembayaran (Payment)' }
+            ];
+
+            let html = '';
+            let prevDate = null;
+
+            stages.forEach((stage, index) => {
+                const dateStr = d.timeline[stage.key];
+                let dateDisplay = "-";
+                let durationDisplay = "-";
+                let rowClass = "";
+                let statusBadge = '<span class="text-gray-400 text-[10px]">Pending</span>';
+                let currentDate = null;
+
+                if (dateStr) {
+                    currentDate = new Date(dateStr);
+                    dateDisplay = currentDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                    statusBadge = '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold">Selesai</span>';
+                    
+                    if (prevDate) {
+                        // Hitung selisih hari
+                        const diffTime = Math.abs(currentDate - prevDate);
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                        durationDisplay = diffDays + " Hari";
+                        
+                        // Highlight jika durasi lama (misal > 14 hari)
+                        if(diffDays > 14) durationDisplay = `<span class="text-red-600 font-bold"><i class="fas fa-exclamation-circle mr-1"></i>${diffDays} Hari</span>`;
+                        else durationDisplay = `<span class="text-blue-600 font-bold">${diffDays} Hari</span>`;
+                    } else {
+                        durationDisplay = "<span class='text-gray-500 italic'>Mulai</span>";
+                    }
+                    prevDate = currentDate; 
+                } else {
+                    // Jika tahapan belum terlaksana
+                    if (prevDate) {
+                         // Tahapan ini sedang berjalan (Next Step)
+                         statusBadge = '<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold animate-pulse">Dalam Proses</span>';
+                         rowClass = "bg-amber-50";
+                         prevDate = null; // Stop calculation for next steps
+                    }
+                }
+
+                html += `
+                    <tr class="hover:bg-gray-50 border-b ${rowClass}">
+                        <td class="p-2 border-r font-bold text-slate-700 text-xs">${stage.label}</td>
+                        <td class="p-2 border-r text-center text-xs font-mono">${dateDisplay}</td>
+                        <td class="p-2 border-r text-center text-xs">${durationDisplay}</td>
+                        <td class="p-2 text-center">${statusBadge}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        // Updated helper functions to show Footer back
         function openRecDetail(id) {
             const d = masterData.find(x => x.id === id); if(!d) return;
             document.getElementById('modalTitle').innerText = 'Status Penerimaan Barang: ' + d.paket;
+            
+            // Show Footer
+            const footer = document.getElementById('modalFooter');
+            if(footer) footer.style.display = 'flex';
+
             const thead = document.getElementById('modalThead');
             thead.innerHTML = `<tr class="bg-gray-100"><th class="p-2 border">No</th><th class="p-2 border">Nama Barang</th><th class="p-2 border text-center">Pesan</th><th class="p-2 border text-center">Terima</th><th class="p-2 border text-center">Sisa</th><th class="p-2 border text-right">Nilai Terima</th><th class="p-2 border text-right">Nilai Sisa</th></tr>`;
             const tbody = document.getElementById('modalTableBody');
@@ -477,6 +1084,11 @@
         function openDetail(id) {
             const d = masterData.find(x => x.id === id); if(!d) return;
             document.getElementById('modalTitle').innerText = 'Rincian Item: ' + d.paket;
+            
+            // Show Footer
+            const footer = document.getElementById('modalFooter');
+            if(footer) footer.style.display = 'flex';
+
             const thead = document.getElementById('modalThead');
             thead.innerHTML = `<tr class="bg-gray-100"><th class="p-2 border">No</th><th class="p-2 border">Nama Barang</th><th class="p-2 border text-center">Jumlah Barang</th><th class="p-2 border text-center">Satuan</th><th class="p-2 border text-right">Harga Satuan</th><th class="p-2 border text-right">Jumlah Harga</th></tr>`;
             const tbody = document.getElementById('modalTableBody');
@@ -515,7 +1127,6 @@
             resetChart('chartPayProgres', { type: 'doughnut', data: { labels: ['Selesai Bayar', 'Belum Bayar'], datasets: [{ data: [paidTotal, totalContracts - paidTotal], backgroundColor: ['#7c3aed', '#f1f5f9'], borderWidth: 0, borderRadius: 10, spacing: 5 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '80%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }, plugins: [payGaugePlugin] });
         }
 
-        // RUP, PR, PO, REC, HOME charts remain similar...
         function updateRecPageCharts(data) {
             const resetChart = (id, config) => { if(charts[id]) charts[id].destroy(); const el = document.getElementById(id); if(el) charts[id] = new Chart(el, config); };
             const unitSummary = unpadUnits.map(u => { const ud = data.filter(d => d.unit === u && ['RECEIVING','PAYMENT'].includes(d.tahap)); const valRec = ud.reduce((a,c)=>a + c.items.reduce((b,it)=>b+(it.vRec*it.h),0), 0); return { label: u.substring(0,10)+'..', q: ud.length, v: valRec, fullLabel: u }; });
@@ -565,19 +1176,70 @@
             resetChart('chartUnitProgres', { type: 'bar', data: { labels: progresData.map(d=>d.l), datasets: [{ label: 'Total PR', data: progresData.map(d=>d.tQ), backgroundColor: '#cbd5e1' }, { label: 'Executed (PO)', data: progresData.map(d=>d.eQ), backgroundColor: '#6366f1' }] }, options: { responsive: true, maintainAspectRatio: false } });
         }
 
-        function updateMonitoringViews(data) {
-            const tab = document.getElementById('monPaketTable'); const sel = document.getElementById('monPaketSelector');
-            if(sel) sel.innerHTML = data.map(d => `<option value="${d.id}">${d.paket}</option>`).join("");
-            if(tab) tab.innerHTML = data.map(d => { const lastKey = Object.keys(d.timeline).filter(k => d.timeline[k] !== null).pop(); const days = Math.ceil(Math.abs(TODAY - new Date(d.timeline[lastKey] || TODAY)) / (1000*60*60*24)); const eff = d.nilaiPo > 0 ? (((d.nilaiRup - d.nilaiPo) / d.nilaiRup) * 100).toFixed(1) : "-"; let slaBg = days > 14 ? 'bg-red-100 text-red-600' : (days > 7 ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'); return `<tr><td><div class="font-bold text-slate-700 text-xs">${d.paket}</div></td><td>${fIDR(d.nilaiPo)}</td><td class="text-center font-bold text-green-600">${eff !== "-" ? eff + "%" : "-"}</td><td class="text-[10px] font-bold text-blue-600 uppercase italic">${d.tahap}</td><td class="text-center font-bold">${days} Hari</td><td class="text-center"><span class="${slaBg} px-2 py-0.5 rounded text-[9px] font-bold uppercase">${days>14?'Over':(days>7?'Warn':'Aman')}</span></td><td><button onclick="openDetail(${d.id})" class="text-blue-600 font-bold text-xs uppercase">Detail</button></td></tr>`; }).join("");
-        }
-
-        function updatePaketTimeline() {
-            const id = document.getElementById('monPaketSelector').value;
-            const item = masterData.find(d => d.id == id); if(!item) return;
+        function updatePaketTimeline(id) {
             const stages = ["RUP", "PR", "Negotiations", "PO", "REC", "Pay"];
-            const dates = stages.map(s => item.timeline[s] ? new Date(item.timeline[s]) : null);
+            let dates = []; 
+            let chartTitle = 'Timeline Proses P2P Procurement';
+
+            if (id) {
+                const item = masterData.find(d => d.id == id); 
+                if(item) {
+                    dates = stages.map(s => item.timeline[s] ? new Date(item.timeline[s]) : null);
+                }
+            } else {
+                dates = Array(stages.length).fill(null);
+            }
+            
             if(timelineChart) timelineChart.destroy();
-            timelineChart = new Chart(document.getElementById('chartTimelinePaket').getContext('2d'), { type: 'line', data: { labels: stages, datasets: [{ label: 'Capaian', data: dates, borderColor: '#3b82f6', pointRadius: 8, fill: true, tension: 0.1, spanGaps: false }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { type: 'time', time: { unit: 'day' } } } } });
+            timelineChart = new Chart(document.getElementById('chartTimelinePaket').getContext('2d'), { 
+                type: 'line', 
+                data: { 
+                    labels: stages, 
+                    datasets: [{ 
+                        label: 'Tanggal Realisasi', 
+                        data: dates, 
+                        borderColor: '#3b82f6', 
+                        pointRadius: 8, 
+                        fill: true, 
+                        tension: 0.1, 
+                        spanGaps: false 
+                    }] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        y: { 
+                            type: 'time', 
+                            time: { 
+                                unit: 'month' 
+                            },
+                            reverse: false, // Explicitly set bottom-to-top
+                            min: id ? undefined : '2024-01-01', 
+                            max: id ? undefined : '2024-12-31',
+                            ticks: {
+                                callback: function(value) {
+                                    return new Date(value).toLocaleDateString('id-ID', { month: 'long' });
+                                }
+                            }
+                        } 
+                    },
+                    plugins: { 
+                        legend: { display: false }, 
+                        title: { display: true, text: chartTitle, font: { size: 14 } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.parsed.y !== null) {
+                                        return new Date(context.parsed.y).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    } 
+                } 
+            });
         }
 
         function resetFilters() { document.getElementById('filterTahun').value = "Semua"; document.getElementById('filterUnit').value = "Semua"; document.getElementById('filterMetode').value = "Semua"; document.getElementById('filterSearch').value = ""; updateDashboard(); }
